@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a0a0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Dark Silicon">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<title>Dark Silicon</title>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="top"><span class="ttl">Dark Silicon</span><span id="node" class="dim"></span></div>
+    <div id="cyc" class="big">0</div>
+    <div class="subrow"><span id="cps" class="dim"></span><span id="mult" class="dim"></span></div>
+    <div id="ticker" class="ticker"></div>
+  </header>
+  <main id="main"></main>
+  <nav id="nav"></nav>
+</div>
+<button id="irq" class="irq" hidden></button>
+<div id="fx"></div>
+<div id="toasts"></div>
+<div id="modal" hidden></div>
+<script src="core.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
