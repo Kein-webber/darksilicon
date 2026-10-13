@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.web.darksilicon_d6712.twa",
+        "sha256_cert_fingerprints": ["91:99:1E:86:BD:4B:F0:12:60:A8:2F:75:EC:15:A2:9C:D8:68:B2:68:23:AD:DD:B9:E2:18:E7:D4:67:1B:7A:2D"]
+      }
+    }]
