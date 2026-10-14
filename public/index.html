@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0a0a0c">
+<meta name="theme-color" content="#070b12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -16,12 +16,28 @@
 </head>
 <body>
 <div id="app">
-  <header>
-    <div class="top"><span class="ttl">Dark Silicon</span><span id="node" class="dim"></span></div>
-    <div id="cyc" class="big">0</div>
-    <div class="subrow"><span id="cps" class="dim"></span><span id="mult" class="dim"></span></div>
-    <div id="ticker" class="ticker"></div>
+  <header id="hud">
+    <div class="top"><span class="ttl">DARK SILICON</span><span id="node" class="chipt"></span></div>
+    <div class="cycrow"><span id="cyc" class="big">0</span><span class="unit">cycles</span></div>
+    <div class="stats">
+      <span><i>OUTPUT</i><b id="cps">0/s</b></span>
+      <span><i>POWER</i><b id="mult">×1</b></span>
+      <span><i>HEAT</i><b id="heatv">0%</b></span>
+    </div>
+    <div class="hbar"><i id="heatbar"></i></div>
   </header>
+  <div id="lore" class="lore">The silicon sleeps.</div>
+  <section id="goal" class="goal"><div class="gl"><span id="gtag" class="gtag"></span><span id="gtxt" class="gtxt"></span><span id="gnum" class="gnum"></span></div><div class="gbar"><i id="gfill"></i></div></section>
+  <div id="hintchip" class="hintchip"><b id="htag"></b><span id="htxt"></span></div>
+  <section id="stage">
+    <div id="sbar"><div id="views"></div><button id="fold" aria-label="Collapse schematic">▴</button></div>
+    <canvas id="scene"></canvas>
+  </section>
+  <div id="acts">
+    <button id="tickbtn" class="tickbtn"><span>TICK CLOCK</span><b id="tickv">+1</b></button>
+    <button id="ocbtn" class="ocbtn" hidden><span>OVERCLOCK</span><b id="ocv">OFF</b></button>
+  </div>
+  <div id="subs"></div>
   <main id="main"></main>
   <nav id="nav"></nav>
 </div>
@@ -30,6 +46,7 @@
 <div id="toasts"></div>
 <div id="modal" hidden></div>
 <script src="core.js"></script>
+<script src="scene.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

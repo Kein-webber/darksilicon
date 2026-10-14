@@ -1,5 +1,7 @@
-const V = 'darksilicon-v1';
-const FILES = ['./', 'index.html', 'style.css', 'core.js', 'ui.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const V = 'darksilicon-v3';
+const FILES = ['./', 'index.html', 'style.css', 'core.js', 'scene.js', 'ui.js', 'manifest.json', 'icon-192.png', 'icon-512.png',
+  'fonts/cinzel-latin-600-normal.woff2', 'fonts/cinzel-latin-700-normal.woff2', 'fonts/im-fell-english-latin-400-italic.woff2', 'fonts/chakra-petch-latin-500-normal.woff2', 'fonts/chakra-petch-latin-600-normal.woff2', 'fonts/chakra-petch-latin-700-normal.woff2',
+  'fonts/jetbrains-mono-latin-400-normal.woff2', 'fonts/jetbrains-mono-latin-600-normal.woff2'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
