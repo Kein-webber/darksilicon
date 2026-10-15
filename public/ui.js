@@ -74,7 +74,7 @@ const TABS = [
   { id: 'more', n: 'CODEX', ok: () => true }
 ];
 const SUBS = {
-  rig: [['units', 'Units', () => true], ['cmp', 'Compute', () => S.un.cmp], ['th', 'Thermal', () => S.un.oc], ['ing', 'Ingress', () => S.un.ct], ['pw', 'Power', () => S.un.pw], ['rk', 'Rack', () => S.sled > 0 || S.st.boards > 0], ['occ', 'Occult', () => S.node >= 1 || S.st.reb >= 2]],
+  rig: [['units', 'Units', () => true], ['cmp', 'Compute', () => S.un.cmp], ['th', 'Thermal', () => S.un.oc], ['ing', 'Ingress', () => S.un.ct], ['pw', 'Power', () => S.un.pw], ['rk', 'Rack', () => S.sled > 0 || S.st.boards > 0], ['occ', 'Occult', () => S.node >= 1 || S.st.reb >= 2], ['mem', 'Memory', () => S.st.reb >= 1], ['fab', 'Foundry', () => S.node >= 1]],
   work: [['procs', 'Incantations', () => S.un.pr], ['cl', 'Pacts', () => S.un.ct]],
   lab: [],
   dom: [['crp', 'The Crypt', () => S.node >= 2], ['alt', 'The Altar', () => S.node >= 4], ['aby', 'The Abyss', () => S.node >= 6]],
@@ -86,7 +86,7 @@ const seenT = {}, seenS = {};
 let view = null, navSig = '', subSig = '';
 const main = $('#main'), nav = $('#nav'), subsEl = $('#subs');
 function subsFor(t) { return SUBS[t].filter(s => s[2]()); }
-const SITEVIEW = { crp: 'crypt', alt: 'altar', aby: 'abyss', rk: 'rack' };
+const SITEVIEW = { crp: 'crypt', alt: 'altar', aby: 'abyss', rk: 'rack', mem: 'mem', fab: 'fab' };
 function syncView() { const v = SITEVIEW[curSub[curTab]]; if (v && (curTab === 'dom' || curTab === 'rig') && SCENE.views(S).indexOf(v) >= 0) { sceneView = v; renderViews(); } }
 function setTab(id) {
   curTab = id; seenT[id] = 1;
@@ -149,7 +149,7 @@ function vUnits() {
         const p1 = h('div', 'sub'), p2 = h('div', 'sub', G[i].d), bar = h('div', 'bar'); const bi = h('i'); bar.append(bi);
         info.append(nm, p1, bar, p2);
         const b = h('button', 'buy act'); const bl = h('small'); b.append(h('span'), bl);
-        b.onclick = () => { const k = bm || Math.max(1, C.maxBuy(S, i)); if (C.buyGen(S, i, k)) { } };
+        b.onclick = () => { const k = Math.min(bm || Math.max(1, C.maxBuy(S, i)), C.GEN_CAP - S.g[i]); if (k > 0 && C.buyGen(S, i, k)) { } };
         row.append(info, b); r.append(row);
         rows[i] = { own, p1, bi, b, bs: b.firstChild, bl };
       });
@@ -165,7 +165,8 @@ function vUnits() {
         setT(R.p1, F(per) + '/s each · ' + F(C.genProd(S, +i)) + '/s' + (nx ? ' · ×2 at ' + nx : ''));
         const prev = C.MS.filter(m => m <= n).pop() || 0;
         R.bi.style.width = (nx ? pct(n - prev, nx - prev) : 100) + '%';
-        const k = bm || Math.max(1, C.maxBuy(S, +i));
+        if (n >= C.GEN_CAP) { setT(R.own, '×' + FI(n) + ' MAX'); setT(R.bs, 'MAX'); setT(R.bl, 'CAPPED AT 1000'); setC(R.b, 'off', true); continue; }
+        const k = Math.min(bm || Math.max(1, C.maxBuy(S, +i)), C.GEN_CAP - n);
         const c = C.cost(S, +i, k);
         setT(R.bs, F(c)); setT(R.bl, 'BUY ×' + k);
         setC(R.b, 'off', S.c < c);
@@ -193,9 +194,9 @@ function vRig(cat) {
   return {
     sig: () => items.map(u => u.unl(S) ? 1 : 0).join() + C.NODES[S.node],
     build(r) {
-      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'The Rack', occ: 'The Occult', crp: 'The Crypt', alt: 'The Altar', aby: 'The Abyss' };
+      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'The Rack', occ: 'The Occult', crp: 'The Crypt', alt: 'The Altar', aby: 'The Abyss', mem: 'The Memory bus', fab: 'The Foundry' };
       r.append(h('h2', '', titles[cat]));
-      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.', crp: 'A vault beneath the chip. Every upgrade attaches to the view: coffins of data, bone ribs, ravens, ghouls.', alt: 'A rite of fire and blood. Candles, a chalice, standing stones and a scrying orb appear as you buy them.', aby: 'Something old looks back. Tentacles, floating eyes, a void portal and a tide of whispers.' };
+      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.', crp: 'A vault beneath the chip. Every upgrade attaches to the view: coffins of data, bone ribs, ravens, ghouls.', alt: 'A rite of fire and blood. Candles, a chalice, standing stones and a scrying orb appear as you buy them.', aby: 'Something old looks back. Tentacles, floating eyes, a void portal and a tide of whispers.', mem: 'Opened by your first reboot. RAM sticks, bus lanes, a prefetcher, a branch oracle and warding all show on the MEMORY view.', fab: 'Opened by your first die shrink. A wafer belt, a lithography beam, lenses and cleanroom wards show on the FAB view.' };
       r.append(h('div', 'note', hints[cat]));
       const g = h('div', 'grid'); r.append(g);
       items.forEach(u => {
@@ -214,14 +215,14 @@ function vRig(cat) {
       const bid = bestRig();
       for (const id in tiles) {
         const T = tiles[id], u = T.u, L = C.rigLv(S, id), cap = C.rigCap(S, u);
-        setT(T.lv, 'LV ' + L + '/' + cap);
+        const bc = cap - (u.costs ? 0 : 12), t2 = !u.costs && L >= bc; setT(T.lv, (t2 ? 'TIER II · ' : '') + 'LV ' + L + '/' + cap);
         const a = u.f(C.rigVal(S, u, L)), max = L >= cap;
         let txt = max ? a : a + ' → ' + u.f(C.rigVal(S, u, L + 1));
         if (!max && !(L === 0 && false)) { const d = C.rigDelta(S, id), c0 = C.cps(S); if (d > 0 && c0 > 0) txt += '  (+' + (d / c0 * 100).toFixed(1) + '%)'; }
         setT(T.ba, txt);
         T.bi.style.width = pct(L, cap) + '%';
         const c = max ? 0 : C.rigCost(S, u, L);
-        setT(T.bs, max ? 'MAX' : F(c)); setT(T.bl, max ? 'MAXED' : 'UPGRADE');
+        setT(T.bs, max ? 'MAX' : F(c)); setT(T.bl, max ? 'MAXED' : t2 ? 'EMPOWER' : 'UPGRADE');
         setC(T.b, 'off', max || S.c < c);
         setC(T.t, 'max', max); setC(T.t, 'best', bid === id && !max);
         show(T.best, bid === id && !max);
@@ -440,7 +441,7 @@ function vShrink() {
       const bar = h('div', 'bar'), bi = h('i'); bar.append(bi); p.append(i1, bar, i2, i3); r.append(p);
       const sb = h('button', 'bigbtn v'); r.append(sb);
       armBtn(sb, 'SHRINK THE DIE', () => { if (C.shrink(S)) { toast('Die shrunk to ' + C.NODES[S.node]); SCENE.pulse('board'); } });
-      r.append(h('div', 'note', 'Each shrink: ×2.5 cycles, new units, more threads, higher rig caps, longer offline time. Resets the run, lab and shop (shop microcode is refunded). The next shrink costs more lifetime microcode.'));
+      r.append(h('div', 'note', 'What is a die shrink? The die is the slice of silicon your chip is etched on. The node (180nm, 130nm, 90nm…) is how fine the etching is: smaller means more transistors in the same space, so the chip gets faster. Shrinking is your second rebirth, bigger than a reboot. Each shrink: ×2.5 cycles, new units, more threads, higher rig caps, longer offline time. Resets the run, lab and shop (shop microcode is refunded). The next shrink costs more lifetime microcode.'));
       this.e = { nv, rq, bi, i2, i3, sb };
     },
     upd() {
@@ -585,9 +586,11 @@ const COACH = [
   ['rb', () => S.un.rb, 'Reboot', 'REBIRTH lets you reboot: reset the run for microcode that multiplies everything for good. The first reboot is best done once the reward is more than a trickle.'],
   ['dm', () => S.un.dm, 'Daemons', 'Microcode can bind daemons that automate the game: buying, ticking, overclock, research and more. They survive reboots.'],
   ['bd', () => S.g[8] > 0, 'Board view', 'A Chiplet appeared. The schematic now has a BOARD view, and later a RACK view, selectable on its top-left corner.'],
-  ['shr', () => S.node >= 1, 'Finer stone', 'The die is smaller. Units from higher tiers unlock per node, rig caps rise by 4, and the cost of future upgrades climbs with your power.'],
+  ['shr', () => S.node >= 1, 'Finer stone', 'The die is the slice of silicon the chip is etched on. You rebuilt it on a finer node, so more transistors fit and the chip does more. Units from higher tiers unlock per node, rig caps rise by 4, and the cost of future upgrades climbs with your power.'],
   ['rk', () => S.sled > 0 || S.st.boards > 0, 'The rack is yours', 'Your first sled slid into the rack. FORGE now has a Rack tab: richer sleds, more bays, cold aisles and faster pacts.'],
   ['occ', () => S.node >= 1 || S.st.reb >= 2, 'The Occult', 'The old stone whispers. FORGE now has an Occult tab with forbidden parts: runic etching, a watching eye, a gargoyle heatsink, and more that wake as you reboot and shrink the die.'],
+  ['mem', () => S.st.reb >= 1, 'The Memory bus', 'Your first reboot opened FORGE, Memory. RAM sticks, bus lanes, a prefetcher, a branch oracle and warding each attach to the new MEMORY view of the schematic.'],
+  ['fab', () => S.node >= 1, 'The Foundry', 'A die shrink means rebuilding the chip on a finer etching, so every transistor is smaller and the chip does more. The Foundry is where that happens: FORGE, Foundry adds a wafer belt, a lithography beam, lenses and cleanroom wards on the FAB view.'],
   ['crp', () => S.node >= 2, 'The Crypt', 'A vault opened beneath the chip. DOMAIN, The Crypt: every upgrade you buy attaches to the CRYPT view: coffins of data, bone ribs, ravens and ghouls.'],
   ['alt', () => S.node >= 4, 'The Altar', 'An altar rose from the stone. DOMAIN, The Altar: candles, a blood chalice, standing stones and a scrying orb. More cycles, more microcode.'],
   ['aby', () => S.node >= 6, 'The Abyss', 'The floor gave way. DOMAIN, The Abyss: tentacles, floating eyes, a void portal and the tide of whispers. Something looks back.'],

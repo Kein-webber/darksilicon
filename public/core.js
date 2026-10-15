@@ -8,8 +8,8 @@
 // ---------- static data ----------
 const MS = [25, 50, 100, 200, 300, 400, 500, 600, 800, 1000]; // each milestone: x2 to that tier
 const GENS = [
-  { id: 'tr',   n: 'Transistor',    b: 15,     r: 1.15, p: 0.2,      u: 0, d: 'Sand that learned to say yes or no.' },
-  { id: 'lg',   n: 'Logic Gate',    b: 220,    r: 1.15, p: 2.2,      u: 0, d: 'Three can argue. Two can agree.' },
+  { id: 'tr',   n: 'Transistor',    b: 12,     r: 1.13, p: 0.25,     u: 0, d: 'Sand that learned to say yes or no.' },
+  { id: 'lg',   n: 'Logic Gate',    b: 160,    r: 1.14, p: 2.5,      u: 0, d: 'Three can argue. Two can agree.' },
   { id: 'alu',  n: 'ALU',           b: 1.5e3,  r: 1.14, p: 27,       u: 0, d: 'It counts, and does not tire.' },
   { id: 'reg',  n: 'Register',      b: 2e4,    r: 1.14, p: 308,      u: 0, d: 'A pocket for the thing being thought.' },
   { id: 'l1',   n: 'L1 Cache',      b: 3e5,    r: 1.15, p: 3750,     u: 0, d: 'Memory kept close to the heart.' },
@@ -22,7 +22,7 @@ const GENS = [
   { id: 'fab',  n: 'Cathedral Fab', b: 3e15,   r: 1.18, p: 1.03e13,  u: 6, d: 'Light is the only chisel here.' }
 ];
 const NODES = ['180nm', '130nm', '90nm', '65nm', '45nm', '32nm', '22nm', '14nm', '10nm', '7nm', '5nm', '3nm', '2nm'];
-const REQ = [130, 1950, 29250, 438750, 6581250, 98718750, 1480781250, 22211718750, 333175781250, 4997636718750, 74964550781250, 1124468261718750]; // lifetime µ to shrink from node i
+const REQ = Array.from({ length: 12 }, (_, i) => Math.round(130 * Math.pow(17.5, i))); // lifetime µ to shrink from node i
 const NODE_MULT = 2.5;
 const MUK = 2e8, MUP = 0.33;
 const ASC_MU = 3e7, ASC_DIV = 1e7; // ascension threshold / divisor
@@ -189,7 +189,29 @@ RIG.push(
   { id: 'tid', cat: 'aby', n: 'Tide of whispers', tag: 'TID', b: 36000, r: 1.7, cap: 10, unl: siteAbyss,
     val: L => L, f: v => '−' + v + '% unit cost', note: 'The voices haggle on your behalf' }
 );
-const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1, can: 1, tnt: 1, prt: 1 };
+// ---- the Memory bus (opens after the first reboot) and the Foundry (opens after the first die shrink) ----
+const siteMem = S => S.st.reb >= 1, siteFab = S => S.node >= 1;
+RIG.push(
+  { id: 'ram', cat: 'mem', n: 'Memory sticks', tag: 'RAM', b: 700, r: 1.6, unl: siteMem,
+    val: L => 2 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Sticks slot into the board' },
+  { id: 'lan', cat: 'mem', n: 'Bus lanes', tag: 'LAN', b: 800, r: 1.6, cap: 8, unl: siteMem,
+    val: L => 2 * L, f: v => '+' + v.toFixed(1) + '% tick power', note: 'More lanes, more traffic' },
+  { id: 'pre', cat: 'mem', n: 'Prefetcher', tag: 'PRE', b: 900, r: 1.6, cap: 8, unl: siteMem,
+    val: L => 3 * L, f: v => '+' + v.toFixed(1) + '% pact pay', note: 'It reaches for work before it is asked' },
+  { id: 'brp', cat: 'mem', n: 'Branch oracle', tag: 'ORC', b: 1000, r: 1.65, cap: 6, unl: siteMem,
+    val: L => 2.5 * L, f: v => '−' + v.toFixed(1) + '% heat', note: 'It foretells the path and wastes less' },
+  { id: 'ecc', cat: 'mem', n: 'Warding', tag: 'WRD', costs: [4e4, 4e6, 4e8], unl: siteMem,
+    val: L => 8 * L, f: v => '+' + v + '% data', note: 'Wards keep every bit true' },
+  { id: 'wfr', cat: 'fab', n: 'Wafer line', tag: 'WFR', b: 2500, r: 1.6, unl: siteFab,
+    val: L => 2 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Blank wafers ride the belt' },
+  { id: 'lsr', cat: 'fab', n: 'Lithography beam', tag: 'LSR', b: 3000, r: 1.65, cap: 6, unl: siteFab,
+    val: L => 2 * L, f: v => '+' + v.toFixed(1) + '% microcode', note: 'A finer beam writes a finer stone' },
+  { id: 'lns', cat: 'fab', n: 'Lens stack', tag: 'LNS', costs: [2e5, 2e7, 2e9, 2e11], unl: siteFab,
+    val: L => 0.04 * L, f: v => '+' + v.toFixed(2) + ' overclock', note: 'Each glass focuses the fire' },
+  { id: 'clr', cat: 'fab', n: 'Cleanroom wards', tag: 'CLR', b: 2800, r: 1.65, cap: 8, unl: siteFab,
+    val: L => 3 * L, f: v => '+' + v + '° ceiling', note: 'Nothing unclean touches the stone' }
+);
+const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1, can: 1, tnt: 1, prt: 1, ram: 1, wfr: 1 };
 const RIGM = {}; RIG.forEach(u => { RIGM[u.id] = u; });
 
 // ---------- clients / contracts ----------
@@ -357,7 +379,7 @@ function recalc(S) {
   for (const q of QP) if (S.qp[q.id]) q.fx(M);
   for (const r of RR) { const L = S.rr[r.id] || 0; if (L) r.fx(M, L); }
   (MODES[S.mode] || MODES.std).fx(M);
-  const L = id => S.rig[id] || 0;
+  const L = id => { const v = S.rig[id] || 0; return v ? effLv(S, RIGM[id], v) : 0; };
   M.gA += 0.03 * L('clk') + 0.025 * L('cor') + 0.015 * L('psu');
   M.gB *= Math.pow(1.2, L('clu'));
   M.cool += 0.7 * L('fin') + 1.1 * L('fan');
@@ -374,6 +396,8 @@ function recalc(S) {
   M.gA += 0.015 * L('can'); M.muG *= 1 + 0.015 * L('bsn'); M.oc += 0.03 * L('sig'); M.hcap += 3 * L('sig'); M.ctRew *= 1 + 0.1 * L('orb');
   M.gA += 0.02 * L('tnt'); M.irqP *= 1 + 0.08 * L('eyr'); M.gB *= Math.pow(1.12, L('prt')); M.cost *= 1 - 0.01 * L('tid');
   M.oc += 0.03 * L('vrm');
+  M.gA += 0.02 * L('ram'); M.tapP += 0.02 * L('lan'); M.ctRew *= 1 + 0.03 * L('pre'); M.heatX *= 1 - 0.025 * L('brp'); M.dm *= 1 + 0.08 * L('ecc');
+  M.gA += 0.02 * L('wfr'); M.muG *= 1 + 0.02 * L('lsr'); M.oc += 0.04 * L('lns'); M.hcap += 3 * L('clr');
   M.oc *= M.ocX;
   M.heatX *= 1 + 0.025 * L('clk');
   M.irqP *= 1 + 0.08 * L('edg'); M.irqR *= 1 + 0.04 * L('edg');
@@ -422,16 +446,18 @@ function permMult(S) {
 function costScale(S) { const p = permMult(S) / COST_B0; return p > 1 ? Math.pow(p, CP) : 1; }
 const nodeCost = costScale;
 function cost(S, i, k) { const G = GENS[i]; return G.b * nodeCost(S) * S._M.cost * Math.pow(G.r, S.g[i]) * (Math.pow(G.r, k) - 1) / (G.r - 1); }
+const GEN_CAP = 1000;
 function maxBuy(S, i) {
+  if (S.g[i] >= GEN_CAP) return 0;
   const G = GENS[i], base = G.b * nodeCost(S) * S._M.cost * Math.pow(G.r, S.g[i]);
   if (S.c < base) return 0;
   let k = Math.floor(Math.log(S.c * (G.r - 1) / base + 1) / Math.log(G.r));
   while (k > 0 && cost(S, i, k) > S.c) k--;
-  return k;
+  return Math.min(k, GEN_CAP - S.g[i]);
 }
 function genAvail(S, i) { return GENS[i].u <= S.node; }
 function buyGen(S, i, k) {
-  if (!genAvail(S, i) || k < 1) return false;
+  if (!genAvail(S, i) || k < 1 || S.g[i] + k > GEN_CAP) return false;
   const c = cost(S, i, k);
   if (S.c < c) return false;
   S.c -= c; S.g[i] += k; return true;
@@ -443,9 +469,16 @@ function heatPct(S) { return Math.min(100, S.heat / S._M.hcap * 100); }
 // ---------- rig upgrades ----------
 const rigLv = (S, id) => S.rig[id] || 0;
 const rigTotal = S => { let n = 0; for (const k in S.rig) n += S.rig[k]; return n; };
-function rigCap(S, u) { return u.costs ? u.costs.length : (u.cap || 8 + 4 * S.node); }
-function rigCost(S, u, L) { return u.costs ? u.costs[L] * costScale(S) : u.b * Math.pow(u.r, L) * costScale(S); }
-function rigVal(S, u, L) { return u.val(L, S); }
+const rigBase = (S, u) => u.costs ? u.costs.length : (u.cap || 8 + 4 * S.node);
+const rigExtra = (S, u) => u.costs ? 0 : 12;   // Tier II: late levels, steep cost, half effect
+function rigCap(S, u) { return rigBase(S, u) + rigExtra(S, u); }
+function effLv(S, u, L) { const b = rigBase(S, u); return L <= b ? L : b + (L - b) * 0.15; }
+function rigCost(S, u, L) {
+  if (u.costs) return u.costs[L] * costScale(S);
+  const b = rigBase(S, u), t2 = L >= b ? 150 * Math.pow(1.5, L - b) : 1;
+  return u.b * Math.pow(u.r, L) * t2 * costScale(S);
+}
+function rigVal(S, u, L) { return u.val(effLv(S, u, L), S); }
 function rigDelta(S, id) {
   if (!RIG_PROD[id]) return 0;
   const base = cps(S);
@@ -813,13 +846,13 @@ function hint(S) {
   if (S.un.pr && S.q.length < S._M.thr && !dOn(S, 'scribe') && S.c > 0) return { tag: 'IDLE', tone: 'amb', t: 'A thread is idle. Cast an incantation in Rites to earn data.' };
   if (S.un.oc && !S.oc && !S.thr && heatPct(S) < 20 && !dOn(S, 'frost') && !S._M.noOC) return { tag: 'TIP', tone: 'dim', t: 'Overclock multiplies every cycle. Engage it while heat is low.' };
   if (S.data >= 10 && RES.some(r => !S.res[r.id] && (!r.req || S.res[r.req]) && S.data >= r.c)) return { tag: 'LAB', tone: 'grn', t: 'You have enough data for a research.' };
-  return { tag: 'TIP', tone: 'dim', t: 'Milestones double a unit at 25, 50, 100 and 200 owned.' };
+  return { tag: 'TIP', tone: 'dim', t: 'Milestones double a unit at 25, 50, 100 and 200 owned. Each unit caps at 1000.' };
 }
 
 // ---------- help topics ----------
 const HELP = [
   { id: 'basics', t: 'The basics', u: S => true,
-    b: 'Tick the clock to push cycles through the silicon. Spend cycles on units. Each tier boosts the tier below it a little, and owning 25, 50, 100 and 200 of a unit doubles its output. New parts of the machine appear as you grow, so keep an eye out for outlines on the schematic.' },
+    b: 'Tick the clock to push cycles through the silicon. Spend cycles on units. Each tier boosts the tier below it a little, and owning 25, 50, 100 and 200 of a unit doubles its output. Each unit caps at 1000. New parts of the machine appear as you grow, so keep an eye out for outlines on the schematic.' },
   { id: 'rig', t: 'The Forge', u: S => S.un.cmp,
     b: 'Forge upgrades are levelled parts: Compute raises output, Thermal lets you overclock longer, Ingress speeds up client work, Power adds efficiency. They stay when you reboot or shrink. A die shrink raises every level cap by 4 and makes the next levels cost more. The tile marked Best buy gives the most output for its price.' },
   { id: 'oc', t: 'Overclock and heat', u: S => S.un.oc,
@@ -837,13 +870,17 @@ const HELP = [
   { id: 'daemons', t: 'Daemons', u: S => S.un.dm,
     b: 'Daemons are bound with microcode and keep working through reboots and shrinks. They automate buying, ticking, processes, overclocking, research, interrupts and rebooting. You can switch each one off.' },
   { id: 'shrink', t: 'Die shrink', u: S => S.un.rb,
-    b: 'A die shrink makes the process node finer. It gives ×2.5 cycles, unlocks new units, processes and threads, and raises rig caps. It resets the run, research and the shop, but refunds the microcode you spent there. The next shrink needs more lifetime microcode.' },
+    b: 'The die is the slice of silicon your chip is etched on, and the process node (180nm, 130nm, 90nm…) is how fine the etching is. Finer means more transistors fit, so the chip does more. A die shrink is your second rebirth: you rebuild the chip on a finer node. It gives ×2.5 cycles, unlocks new units, processes and threads, and raises rig caps. It resets the run, research and the shop, but refunds the microcode you spent there. The next shrink needs more lifetime microcode.' },
   { id: 'rack', t: 'The rack', u: S => S.sled > 0 || S.st.boards > 0,
     b: 'Every cleared pact board slides a sled into the rack. FORGE, Rack upgrades make each sled stronger, add bays for more sleds, cool the chip and speed up pacts.' },
   { id: 'occult', t: 'The Occult', u: S => S.node >= 1 || S.st.reb >= 2,
     b: 'Forbidden parts in FORGE, Occult: runic etching, a watching eye, a gargoyle heatsink, blood conduits, soul jars, a crypt cache and a summoning circle that adds threads. More of them open as you reboot and shrink the die.' },
   { id: 'domain', t: 'The Domain', u: S => S.node >= 2,
     b: 'Beyond the chip lie three dark sites: the Crypt (die 90nm), the Altar (45nm) and the Abyss (22nm). Each one has its own view in the schematic, and every upgrade you buy in DOMAIN visibly attaches to it: coffins, ravens and ghouls; candles, a chalice and standing stones; tentacles, eyes and a void portal. Each site boosts something different, so none replaces the others.' },
+  { id: 'mem', t: 'The Memory bus', u: S => S.st.reb >= 1,
+    b: 'Your first reboot opens FORGE, Memory: RAM sticks, bus lanes, a prefetcher, a branch oracle and warding. Each one you buy appears on the MEMORY view of the schematic.' },
+  { id: 'fab', t: 'The Foundry', u: S => S.node >= 1,
+    b: 'Your first die shrink opens FORGE, Foundry: a wafer line, a lithography beam, a lens stack and cleanroom wards. They appear on the FAB view of the schematic.' },
   { id: 'omen', t: 'Omens', u: S => S.un.pr,
     b: 'Now and then a voice offers a choice instead of a plain reward. Take the gift for a burst of cycles at the cost of heat, strike a bargain to double output for a short time at the cost of a quarter of your cycles, or refuse and keep a little data. The Daemon of Mirrors refuses for you.' },
   { id: 'asc', t: 'Ascension', u: S => S.un.asc,
@@ -949,7 +986,7 @@ const CORE = {
   MODES, MODE_IDS, MIL, QP, GOALS, HELP, ASC_MU, costScale, permMult,
   fmt, fmtI, newState, serialize, deserialize, recalc, log,
   cps, gMult, genMult, muMult, qMult, sledMult, maxSleds, genProd, tapValue, tap, cost, maxBuy, genAvail, buyGen, toggleOC, dataMult, dmBase, heatPct,
-  rigLv, rigTotal, rigCap, rigCost, rigVal, rigDelta, buyRig, refRate, stressLvl,
+  GEN_CAP, rigLv, rigTotal, rigCap, rigCost, rigVal, rigDelta, buyRig, refRate, stressLvl,
   rrCap, rrCost, rrOpen, buyRR,
   ctInfo, ctRate, ctSize, ctEta, speedCost, speedUp, ctWork,
   procCost, startProc, buyRes, buyShop, buyDaemon, dOn,

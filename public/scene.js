@@ -12,6 +12,8 @@ function views(St) {
   const v = ['chip'];
   if (St.g[8] > 0 || St.node >= 1) v.push('board');
   if (St.sled > 0 || St.st.boards > 0) v.push('rack');
+  if (St.st.reb >= 1) v.push('mem');
+  if (St.node >= 1) v.push('fab');
   if (St.node >= 2) v.push('crypt');
   if (St.node >= 4) v.push('altar');
   if (St.node >= 6) v.push('abyss');
@@ -203,8 +205,70 @@ function chipView() {
     cx.fillStyle = COL.red; cx.beginPath(); cx.arc(Math.sin(T / 1500) * 2, 0, 2.2 * blink, 0, 6.283); cx.fill();
     cx.restore();
   }
+
+  // data packets crossing the die between clusters
+  if (S.un.cmp) {
+    const np = Math.min(14, 3 + Math.floor(Math.log10(1 + C.cps(S)) * 1.6));
+    cx.strokeStyle = '#1e1c19'; cx.beginPath(); cx.moveTo(101, 102.5); cx.lineTo(257, 102.5); cx.moveTo(179.5, 40); cx.lineTo(179.5, 164); cx.stroke();
+    for (let i = 0; i < np; i++) {
+      const f = (T / (S.oc ? 1400 : 2600) + i / np) % 1, horiz = i % 2 === 0;
+      cx.fillStyle = hot; cx.globalAlpha = 0.55 * pop('clk', true);
+      if (horiz) cx.fillRect(101 + f * 156 - 1, 101.5, 3, 2); else cx.fillRect(178.5, 40 + f * 124 - 1, 2, 3);
+    }
+    cx.globalAlpha = 1;
+  }
+  // occult attachments
+  const nrun = Math.min(8, L('run')), ngar = L('gar'), nbld = L('bld'), nsol = L('sol'), nhrn = L('hrn');
+  for (let i = 0; i < nrun; i++) {
+    const x = 106 + i * 17, a = pop('run' + i, true);
+    cx.save(); cx.globalAlpha = a * (0.45 + 0.4 * Math.sin(T / 700 + i)); cx.strokeStyle = COL.amb; cx.lineWidth = 1; cx.beginPath();
+    cx.moveTo(x, 6); cx.lineTo(x, 15);
+    if (i % 3 === 0) { cx.moveTo(x - 3, 9); cx.lineTo(x, 6); cx.lineTo(x + 3, 9); }
+    if (i % 3 === 1) { cx.moveTo(x - 3, 15); cx.lineTo(x, 11); cx.lineTo(x + 3, 15); }
+    if (i % 3 === 2) { cx.moveTo(x - 3, 10); cx.lineTo(x + 3, 12); }
+    cx.stroke(); cx.restore();
+  }
+  if (ngar > 0) {
+    const a = pop('gar', true), sc = 0.8 + Math.min(0.5, ngar * 0.03), fl = Math.sin(T / 500) * 0.12;
+    cx.save(); cx.globalAlpha = a; cx.translate(310, 31); cx.scale(sc, sc);
+    cx.fillStyle = '#17171b'; cx.strokeStyle = '#4a4640';
+    cx.beginPath(); cx.moveTo(-14, 0); cx.lineTo(14, 0); cx.lineTo(10, -6); cx.lineTo(0, -10); cx.lineTo(-10, -6); cx.closePath(); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.moveTo(-8, -7); cx.lineTo(-20, -16 - fl * 20); cx.lineTo(-13, -3); cx.closePath(); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.moveTo(8, -7); cx.lineTo(20, -16 - fl * 20); cx.lineTo(13, -3); cx.closePath(); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.arc(0, -13, 5, 0, 6.283); cx.fill(); cx.stroke();
+    cx.fillStyle = COL.red; cx.fillRect(-3, -14, 2, 2); cx.fillRect(1, -14, 2, 2);
+    cx.restore();
+    for (let i = 0; i < 3; i++) { const f = (T / 1600 + i / 3) % 1; cx.fillStyle = '#8fa6a8'; cx.globalAlpha = (1 - f) * 0.5 * a; cx.fillRect(306 + Math.sin(T / 400 + i) * 3 + i * 4, 18 - f * 14, 2, 2); }
+    cx.globalAlpha = 1;
+  }
+  if (nbld > 0) {
+    const a = pop('bld', true);
+    cx.strokeStyle = '#5a1f1f'; cx.globalAlpha = a; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(86.5, 34); cx.lineTo(86.5, 162); cx.stroke(); cx.lineWidth = 1;
+    const np = Math.min(8, 1 + nbld);
+    for (let i = 0; i < np; i++) { const f = (T / 1800 + i / np) % 1; cx.fillStyle = '#d0504a'; cx.fillRect(85, 162 - f * 128, 3, 3); }
+    cx.globalAlpha = 1;
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = 14 + i * 18, y = 176;
+    if (i < Math.ceil(nsol / 2)) {
+      const a = pop('sol' + i, true); cx.save(); cx.globalAlpha = a;
+      cx.fillStyle = '#0d0d10'; cx.strokeStyle = '#4a4640'; cx.fillRect(x, y + 4, 12, 15); cx.strokeRect(x + .5, y + 4.5, 11, 14); cx.fillRect(x + 3, y, 6, 4); cx.strokeRect(x + 3.5, y + .5, 5, 3);
+      const by = y + 11 + Math.sin(T / 600 + i * 2) * 2.5;
+      cx.fillStyle = '#9bb98a'; cx.globalAlpha = a * (0.55 + 0.4 * Math.sin(T / 400 + i)); cx.beginPath(); cx.arc(x + 6, by, 2.6, 0, 6.283); cx.fill();
+      cx.restore();
+    } else if (i === Math.ceil(nsol / 2) && S.st.reb >= 3) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + 4.5, 11, 14); cx.setLineDash([]); }
+  }
+  if (nhrn > 0) {
+    const a = pop('hrn', true); cx.save(); cx.globalAlpha = a; cx.translate(52, 16);
+    cx.strokeStyle = COL.red; cx.beginPath(); cx.arc(0, 0, 9, 0, 6.283); cx.stroke();
+    cx.rotate(T / 2500); cx.beginPath(); for (let i = 0; i < 5; i++) { const t = i * 2.5133; cx.lineTo(Math.cos(t) * 9, Math.sin(t) * 9); } cx.closePath(); cx.stroke();
+    cx.fillStyle = COL.amb; for (let i = 0; i < nhrn; i++) { const t = i * 6.283 / Math.max(1, nhrn); cx.fillRect(Math.cos(t) * 9 - 1, Math.sin(t) * 9 - 1, 2.5, 2.5); }
+    cx.restore();
+  } else if (S.node >= 2) ghostRing(52, 16, 9);
   ring(COL.teal, 20, 70);
 }
+
+
 
 function boardView() {
   const C = root.CORE;
@@ -237,10 +301,12 @@ function rackView() {
   for (let i = 0; i < NS; i++) {
     const y = 28 + (NS - 1 - i) * rh, x = 106, w = 148, h = rh - 2;
     if (i < S.sled) {
-      cx.globalAlpha = pop('sl' + i, true); cx.fillStyle = '#121215'; cx.fillRect(x, y, w, h); cx.strokeStyle = '#4a4640'; cx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+      const pa = pop('sl' + i, true); cx.save(); cx.translate(-(1 - pa) * 60, 0);
+      cx.globalAlpha = pa; cx.fillStyle = '#121215'; cx.fillRect(x, y, w, h); cx.strokeStyle = (S.rig.sld || 0) > 0 ? GOLDD : '#4a4640'; cx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+      if ((S.rig.sld || 0) > 0) { const sh = ((T / 1800 + i * 0.13) % 1) * (w + 20) - 10; cx.fillStyle = '#b08d57'; cx.globalAlpha = pa * Math.min(0.5, 0.1 + 0.03 * S.rig.sld); cx.fillRect(Math.max(x, x + sh), y + 1, Math.max(0, Math.min(6, w - sh)), h - 2); cx.globalAlpha = pa; }
       for (let k = 0; k < 10; k++) { cx.fillStyle = (Math.sin(T / 260 + i * 2 + k * 1.3) > 0.4) ? hot : '#26241f'; cx.fillRect(x + 6 + k * 5, y + 4, 3, 3); }
       cx.fillStyle = COL.grn; cx.fillRect(x + w - 12, y + 4, 4, 3); cx.fillStyle = '#26241f'; cx.fillRect(x + w - 40, y + 3, 22, 5);
-      cx.globalAlpha = 1;
+      cx.restore(); cx.globalAlpha = 1;
     } else if (i === S.sled) { cx.setLineDash([3, 3]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + .5, w - 1, h - 1); cx.setLineDash([]); }
     else { cx.fillStyle = COL.dim; cx.fillRect(x, y + 5, w, 1); }
   }
@@ -253,6 +319,27 @@ function rackView() {
   cx.fillStyle = COL.amb; cx.font = '600 14px "JetBrains Mono"'; cx.fillText(String(S.st.boards), 12, 112);
   cx.fillStyle = COL.txt; cx.font = '600 7px "Chakra Petch"'; cx.fillText('SLED BONUS', 272, 34);
   cx.fillStyle = COL.grn; cx.font = '600 12px "JetBrains Mono"'; cx.fillText('+' + ((C.sledMult(S) - 1) * 100).toFixed(0) + '%', 272, 46);
+  // cold aisle: fans and frost drifting through the sleds
+  const nf = Math.min(8, S.rig.rcl || 0);
+  for (let i = 0; i < 8; i++) {
+    const fx = 296 + (i % 2) * 28, fy = 84 + Math.floor(i / 2) * 24;
+    if (i < nf) { cx.globalAlpha = pop('rcl' + i, true); fan(fx, fy, 8, T / 110 * (1 + i * 0.07)); cx.globalAlpha = 1; for (let k = 0; k < 2; k++) { const f = (T / 1300 + k / 2 + i * 0.21) % 1; cx.fillStyle = '#8fa6a8'; cx.globalAlpha = (1 - f) * 0.55; cx.fillRect(fx - 10 - f * 36, fy + k * 4 - 2, 3, 1.5); cx.globalAlpha = 1; } }
+    else if (i === nf && S.sled > 0) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.arc(fx, fy, 8, 0, 6.283); cx.stroke(); cx.setLineDash([]); }
+  }
+  if (nf > 0) { cx.fillStyle = COL.txt; cx.font = '600 7px "Chakra Petch"'; cx.fillText('COLD AISLE ' + nf + '/8', 272, 70); }
+  // cabling: a patch panel whose ports light up and pulse into the rack
+  const nc = Math.min(8, S.rig.rcb || 0);
+  if (S.sled > 0) {
+    box(12, 126, 76, 56, 1, { label: 'CABLING', val: String(S.rig.rcb || 0) });
+    for (let i = 0; i < 8; i++) {
+      const px = 22 + (i % 4) * 16, py = 146 + Math.floor(i / 4) * 16;
+      if (i < nc) {
+        const a = pop('rcb' + i, true); cx.globalAlpha = a; cx.fillStyle = '#10150f'; cx.strokeStyle = COL.grn; cx.fillRect(px - 5, py - 4, 10, 8); cx.strokeRect(px - 4.5, py - 3.5, 9, 7);
+        cx.strokeStyle = '#4a4640'; cx.beginPath(); cx.moveTo(px + 5, py); cx.quadraticCurveTo(94, py, 100, 34 + ((i * 17) % 140)); cx.stroke();
+        const f = (T / 1100 + i * 0.19) % 1; cx.fillStyle = COL.grn; cx.fillRect(px + 5 + (100 - px - 5) * f - 1, py + (34 + ((i * 17) % 140) - py) * f * f - 1, 2.5, 2.5); cx.globalAlpha = 1;
+      } else { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(px - 4.5, py - 3.5, 9, 7); cx.setLineDash([]); }
+    }
+  }
   trace(88, 80, 100, 80, 1); trace(260, 80, 272, 80, 2);
   ring(COL.amb, 40, 90);
 }
@@ -420,6 +507,115 @@ function abyssView() {
   ring(COL.red, 20, 70);
 }
 
+// ---- THE MEMORY BUS: RAM sticks, lanes of traffic, prefetcher, branch oracle, wards ----
+function memView() {
+  const L = id => S.rig[id] || 0, nr = L('ram'), nl = Math.min(8, L('lan')), np = Math.min(8, L('pre')), nb = Math.min(6, L('brp')), ne = L('ecc');
+  box(6, 14, 348, 176, 1, { label: 'MEMORY BUS · BOARD', val: 'RAM ' + nr + ' · LANES ' + L('lan'), stroke: '#3a3732', fill: '#0b0b0e' });
+  box(14, 28, 74, 60, 1, { label: 'CPU', stroke: hot });
+  for (let i = 0; i < 9; i++) { cx.fillStyle = hot; cx.globalAlpha = 0.2 + 0.6 * Math.max(0, lit(i, act)); cx.fillRect(22 + (i % 3) * 20, 42 + Math.floor(i / 3) * 14, 16, 10); cx.globalAlpha = 1; }
+  cx.strokeStyle = '#35322d'; cx.beginPath(); cx.moveTo(88, 58); cx.lineTo(96, 58); cx.moveTo(96.5, 40); cx.lineTo(96.5, 186); cx.stroke();
+  // RAM sticks slide into their slots
+  for (let i = 0; i < 4; i++) {
+    const x = 106 + i * 60, y = 28, w = 50, h = 84;
+    cx.fillStyle = '#0f0f12'; cx.fillRect(x - 2, y + h - 2, w + 4, 4);
+    if (nr > i * 2) {
+      const a = pop('ram' + i, true); cx.save(); cx.globalAlpha = a; cx.translate(0, -(1 - a) * 36);
+      cx.fillStyle = '#14130f'; cx.fillRect(x, y, w, h); cx.strokeStyle = '#4a4640'; cx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+      for (let k = 0; k < 8; k++) { cx.fillStyle = hot; cx.globalAlpha = a * (0.2 + 0.7 * Math.max(0, lit(k + i * 3, act))); cx.fillRect(x + 6 + (k % 2) * 22, y + 8 + Math.floor(k / 2) * 17, 16, 12); }
+      cx.globalAlpha = a; cx.fillStyle = GOLDD; for (let k = 0; k < 10; k++) cx.fillRect(x + 3 + k * 4.5, y + h - 5, 2.5, 4);
+      cx.restore();
+      const f = (T / (S.oc ? 500 : 900) + i * 0.23) % 1; cx.fillStyle = hot; cx.globalAlpha = 0.8; cx.fillRect(x + w / 2 - 1, y + h + 2 + f * 8, 2, 3); cx.globalAlpha = 1;
+    } else if (nr === i * 2) { cx.setLineDash([3, 3]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + .5, w - 1, h - 1); cx.setLineDash([]); }
+    else { cx.strokeStyle = COL.dim; cx.strokeRect(x + .5, y + .5, w - 1, h - 1); }
+  }
+  // bus lanes with traffic
+  cx.fillStyle = COL.txt; cx.font = '600 7px "Chakra Petch"'; cx.fillText('LANES', 100, 118);
+  for (let k = 0; k < 8; k++) {
+    const y = 130 + k * 7.5;
+    if (k < Math.max(1, nl)) {
+      cx.strokeStyle = '#2a2824'; cx.beginPath(); cx.moveTo(100, y); cx.lineTo(268, y); cx.stroke();
+      const a = k === 0 && nl === 0 ? 1 : pop('lan' + k, true), n = 4, dir = k % 2 ? -1 : 1;
+      for (let j = 0; j < n; j++) { let f = (T / (S.oc ? 800 : 1500) * (1 + k * 0.08) + j / n + k * 0.17) % 1; if (dir < 0) f = 1 - f; cx.fillStyle = hot; cx.globalAlpha = 0.85 * a; cx.fillRect(100 + f * 166, y - 1, 5, 2); }
+      cx.globalAlpha = 1;
+    } else if (k === Math.max(1, nl)) { cx.setLineDash([2, 3]); cx.strokeStyle = COL.line; cx.beginPath(); cx.moveTo(100, y); cx.lineTo(268, y); cx.stroke(); cx.setLineDash([]); }
+  }
+  // prefetcher: chevrons marching ahead of the traffic
+  box(278, 118, 68, 66, 1, { label: 'PREFETCH', val: String(L('pre')) });
+  for (let i = 0; i < 8; i++) {
+    const x = 286 + (i % 2) * 28, y = 134 + Math.floor(i / 2) * 12;
+    if (i < np) { const a = pop('pre' + i, true), ph = 0.35 + 0.65 * Math.max(0, Math.sin(T / 260 - i * 0.7)); cx.strokeStyle = COL.grn; cx.globalAlpha = a * ph; cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x + 5, y + 3.5); cx.lineTo(x, y + 7); cx.moveTo(x + 7, y); cx.lineTo(x + 12, y + 3.5); cx.lineTo(x + 7, y + 7); cx.stroke(); cx.globalAlpha = 1; }
+    else if (i === np) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + .5, 14, 7); cx.setLineDash([]); }
+  }
+  // branch oracle: a tree whose path flickers
+  box(14, 112, 74, 72, 1, { label: 'ORACLE', val: String(L('brp')) });
+  const NP = [[51, 128], [33, 144], [69, 144], [24, 162], [42, 162], [60, 162], [78, 162]], PA = [[0, 1, 3], [0, 1, 4], [0, 2, 5], [0, 2, 6]], ph = Math.floor(T / 800) % 4;
+  for (let i = 1; i < 7; i++) {
+    const par = i < 3 ? 0 : i < 5 ? 1 : 2;
+    if (i <= nb) { cx.strokeStyle = '#4a4640'; cx.beginPath(); cx.moveTo(NP[par][0], NP[par][1]); cx.lineTo(NP[i][0], NP[i][1]); cx.stroke(); }
+  }
+  for (let i = 0; i < 7; i++) {
+    const [x, y] = NP[i];
+    if (i <= nb) { const on = PA[ph].indexOf(i) >= 0; cx.fillStyle = on ? hot : '#26241f'; cx.globalAlpha = pop('brp' + i, true); cx.beginPath(); cx.arc(x, y, 3.2, 0, 6.283); cx.fill(); cx.globalAlpha = 1; }
+    else if (i === nb + 1) ghostRing(x, y, 3.2);
+  }
+  // warding shields under the CPU
+  for (let i = 0; i < 3; i++) {
+    const x = 26 + i * 25, y = 94;
+    cx.beginPath(); cx.moveTo(x - 7, y); cx.lineTo(x + 7, y); cx.lineTo(x + 7, y + 8); cx.lineTo(x, y + 14); cx.lineTo(x - 7, y + 8); cx.closePath();
+    if (i < ne) { cx.fillStyle = '#10150f'; cx.globalAlpha = pop('ecc' + i, true); cx.fill(); cx.strokeStyle = COL.grn; cx.stroke(); cx.globalAlpha = 0.4 + 0.5 * Math.sin(T / 500 + i); cx.fillStyle = COL.grn; cx.fillRect(x - 1, y + 4, 2, 4); cx.globalAlpha = 1; }
+    else if (i === ne) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.stroke(); cx.setLineDash([]); }
+  }
+  ring(COL.teal, 20, 70);
+}
+
+// ---- THE FOUNDRY: laser, lens stack, wafer belt, cleanroom filters ----
+function fabView() {
+  const C = root.CORE, L = id => S.rig[id] || 0, lr = Math.min(6, L('lsr')), nl = Math.min(4, L('lns')), nw = Math.min(8, L('wfr')), nc = Math.min(8, L('clr'));
+  box(6, 14, 348, 176, 1, { label: 'THE FOUNDRY · LITHOGRAPHY', val: C.NODES[S.node], stroke: '#3a3732', fill: '#0a0a0d' });
+  // cleanroom filter panels with falling clean air
+  for (let i = 0; i < 8; i++) {
+    const x = i < 4 ? 16 + i * 26 : 244 + (i - 4) * 26, y = 24;
+    if (i < nc) {
+      const a = pop('clr' + i, true); cx.globalAlpha = a; cx.fillStyle = '#0f1112'; cx.fillRect(x, y, 22, 8); cx.strokeStyle = '#4a4640'; cx.strokeRect(x + .5, y + .5, 21, 7);
+      cx.fillStyle = '#8fa6a8'; for (let k = 0; k < 3; k++) { const f = (T / 1400 + k / 3 + i * 0.13) % 1; cx.globalAlpha = a * (1 - f) * 0.6; cx.fillRect(x + 4 + k * 7, y + 9 + f * 90, 1.5, 4); }
+      cx.globalAlpha = 1;
+    } else if (i === nc) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + .5, 21, 7); cx.setLineDash([]); }
+  }
+  // laser head
+  box(150, 22, 60, 26, 1, { label: 'LASER', val: String(L('lsr')) });
+  // lens stack
+  for (let k = 0; k < 4; k++) {
+    const y = 58 + k * 10, rx = 22 - k * 3;
+    if (k < nl) { const a = pop('lns' + k, true); cx.globalAlpha = a; cx.strokeStyle = '#8fa6a8'; cx.fillStyle = '#10181a'; cx.beginPath(); cx.ellipse(180, y, rx, 3.2, 0, 0, 6.283); cx.fill(); cx.stroke(); cx.globalAlpha = 1; }
+    else if (k === nl) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.ellipse(180, y, rx, 3.2, 0, 0, 6.283); cx.stroke(); cx.setLineDash([]); }
+  }
+  // wafer stage and the scanning beam
+  const sx = 180 + Math.sin(T / (S.oc ? 350 : 700)) * 34;
+  cx.fillStyle = '#17171b'; cx.fillRect(110, 124, 140, 5); cx.strokeStyle = '#4a4640'; cx.strokeRect(110.5, 124.5, 139, 4);
+  cx.fillStyle = '#1d1c18'; cx.strokeStyle = GOLDD; cx.beginPath(); cx.ellipse(180, 122, 44, 4, 0, 0, 6.283); cx.fill(); cx.stroke();
+  for (let i = 0; i < 14; i++) { const x = 146 + i * 5.2; cx.fillStyle = hot; cx.globalAlpha = Math.abs(x - sx) < 14 ? 0.9 : (x < sx ? 0.35 : 0.08); cx.fillRect(x, 120.5, 3, 3); }
+  cx.globalAlpha = 1;
+  if (lr > 0) {
+    const bw = 2 + lr * 1.1; cx.fillStyle = hot; cx.globalAlpha = 0.12 + 0.04 * lr;
+    cx.beginPath(); cx.moveTo(180 - 5, 48); cx.lineTo(180 + 5, 48); cx.lineTo(sx + bw / 2, 121); cx.lineTo(sx - bw / 2, 121); cx.closePath(); cx.fill();
+    cx.globalAlpha = 0.9; cx.fillRect(sx - 1, 119, 2, 3); cx.globalAlpha = 1;
+  } else { cx.setLineDash([2, 3]); cx.strokeStyle = COL.line; cx.beginPath(); cx.moveTo(180, 48); cx.lineTo(180, 120); cx.stroke(); cx.setLineDash([]); }
+  // wafer belt
+  cx.strokeStyle = '#35322d'; cx.beginPath(); cx.moveTo(14, 156); cx.lineTo(346, 156); cx.moveTo(14, 170); cx.lineTo(346, 170); cx.stroke();
+  const roll = (T / 40) % 16; cx.fillStyle = '#2a2824'; for (let x = 14 + roll; x < 346; x += 16) cx.fillRect(x, 162, 6, 1.5);
+  for (let i = 0; i < 8; i++) {
+    if (i < nw) {
+      const f = (T / 7000 + i / Math.max(2, nw)) % 1, x = 14 + f * 332, a = Math.min(1, pop('wfr' + i, true), f * 8, (1 - f) * 8);
+      cx.globalAlpha = a; cx.fillStyle = '#26241f'; cx.strokeStyle = '#bdb8ad'; cx.beginPath(); cx.ellipse(x, 158, 10, 3, 0, 0, 6.283); cx.fill(); cx.stroke();
+      cx.fillStyle = hot; cx.globalAlpha = a * 0.7; cx.fillRect(x - 3, 157, 2, 1.5); cx.fillRect(x + 1, 157, 2, 1.5); cx.globalAlpha = 1;
+    }
+  }
+  if (nw < 8) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.ellipse(24, 158, 10, 3, 0, 0, 6.283); cx.stroke(); cx.setLineDash([]); }
+  cx.fillStyle = COL.txt; cx.font = '600 7px "Chakra Petch"'; cx.fillText('WAFERS ' + L('wfr') + '/' + C.rigCap(S, C.RIG.find(u => u.id === 'wfr')), 16, 176);
+  cx.fillText('LENSES ' + L('lns') + '/4', 300, 176);
+  ring(COL.teal, 20, 70);
+}
+
 function draw(St, ts, view) {
   if (!cv || !cx) return;
   S = St; T = ts;
@@ -439,7 +635,7 @@ function draw(St, ts, view) {
   cx.textBaseline = 'top';
   if (view !== 'rack' && view !== 'board') {} 
   embers();
-  if (view === 'board') boardView(); else if (view === 'rack') rackView(); else if (view === 'crypt') cryptView(); else if (view === 'altar') altarView(); else if (view === 'abyss') abyssView(); else chipView();
+  if (view === 'board') boardView(); else if (view === 'rack') rackView(); else if (view === 'mem') memView(); else if (view === 'fab') fabView(); else if (view === 'crypt') cryptView(); else if (view === 'altar') altarView(); else if (view === 'abyss') abyssView(); else chipView();
   cx.restore();
 }
 root.SCENE = { init, draw, views, pulse };
