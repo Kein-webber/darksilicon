@@ -8,8 +8,8 @@
 // ---------- static data ----------
 const MS = [25, 50, 100, 200, 300, 400, 500, 600, 800, 1000]; // each milestone: x2 to that tier
 const GENS = [
-  { id: 'tr',   n: 'Transistor',    b: 10,     r: 1.12, p: 0.25,     u: 0, d: 'Sand that learned to say yes or no.' },
-  { id: 'lg',   n: 'Logic Gate',    b: 120,    r: 1.13, p: 2.5,      u: 0, d: 'Three can argue. Two can agree.' },
+  { id: 'tr',   n: 'Transistor',    b: 15,     r: 1.15, p: 0.2,      u: 0, d: 'Sand that learned to say yes or no.' },
+  { id: 'lg',   n: 'Logic Gate',    b: 220,    r: 1.15, p: 2.2,      u: 0, d: 'Three can argue. Two can agree.' },
   { id: 'alu',  n: 'ALU',           b: 1.5e3,  r: 1.14, p: 27,       u: 0, d: 'It counts, and does not tire.' },
   { id: 'reg',  n: 'Register',      b: 2e4,    r: 1.14, p: 308,      u: 0, d: 'A pocket for the thing being thought.' },
   { id: 'l1',   n: 'L1 Cache',      b: 3e5,    r: 1.15, p: 3750,     u: 0, d: 'Memory kept close to the heart.' },
@@ -22,7 +22,7 @@ const GENS = [
   { id: 'fab',  n: 'Cathedral Fab', b: 3e15,   r: 1.18, p: 1.03e13,  u: 6, d: 'Light is the only chisel here.' }
 ];
 const NODES = ['180nm', '130nm', '90nm', '65nm', '45nm', '32nm', '22nm', '14nm', '10nm', '7nm', '5nm', '3nm', '2nm'];
-const REQ = [130, 1560, 18720, 224640, 2695680, 32348160, 388177920, 4658135040, 55897620480, 670771445760, 8049257349120, 96591088189440]; // lifetime µ to shrink from node i
+const REQ = [130, 1820, 25480, 356720, 4994080, 69917120, 978839680, 13703755520, 191852577280, 2685936081920, 37603105146880, 526443472056320]; // lifetime µ to shrink from node i
 const NODE_MULT = 2.5;
 const MUK = 2e8, MUP = 0.33;
 const ASC_MU = 3e7, ASC_DIV = 1e7; // ascension threshold / divisor
@@ -122,7 +122,7 @@ const RIG = [
   { id: 'ceil', cat: 'th', n: 'Heat ceiling', tag: 'CAP', b: 400, r: 1.7,  unl: S => S.un.oc && S.tot >= 2e5,
     val: L => 83 + 2 * L, f: v => v + '°', note: 'Throttle later' },
   { id: 'nic', cat: 'ing', n: 'NIC',          tag: 'NIC', b: 200, r: 1.5,  unl: S => S.un.ct,
-    val: (L, S) => refRate(S) * (1 + 0.04 * L), f: v => fmt(v) + ' req/s', note: 'Clients send work faster' },
+    val: (L, S) => refRate(S) * (1 + 0.04 * L), f: v => fmt(v) + ' req/s', note: 'Patrons send work faster' },
   { id: 'bal', cat: 'ing', n: 'Load balancer', tag: 'BAL', b: 500, r: 1.6, unl: S => S.un.ct,
     val: L => 4 * L, f: v => '+' + v + '%', note: 'Contracts pay +4% each' },
   { id: 'edg', cat: 'ing', n: 'Edge cache',   tag: 'EDG', b: 300, r: 1.55, unl: S => S.un.ct,
@@ -132,7 +132,33 @@ const RIG = [
   { id: 'vrm', cat: 'pw',  n: 'VRM phases',   tag: 'VRM', b: 600, r: 1.6,  unl: S => S.un.pw && S.un.oc,
     val: L => 1.5 + 0.03 * L, f: v => '×' + v.toFixed(2), note: 'Overclock multiplier +0.03' }
 ];
-const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1 };
+const rackOk = S => S.sled > 0 || S.st.boards > 0;
+RIG.push(
+  { id: 'sld', cat: 'rk', n: 'Sled lacquer', tag: 'LAQ', b: 300, r: 1.6, unl: rackOk,
+    val: L => 3 + 0.15 * L, f: v => '+' + v.toFixed(2) + '% per sled', note: 'Each sled feeds the chip more' },
+  { id: 'slt', cat: 'rk', n: 'Rack bays', tag: 'BAY', costs: [5e5, 5e7, 5e9, 5e11], unl: rackOk,
+    val: L => 12 + 2 * L, f: v => v + ' bays', note: 'Room for more sleds' },
+  { id: 'rcl', cat: 'rk', n: 'Cold aisle', tag: 'AIS', b: 400, r: 1.6, unl: rackOk,
+    val: L => 0.12 * L, f: v => '+' + v.toFixed(2) + '/s per sled', note: 'Every sled helps cool the chip' },
+  { id: 'rcb', cat: 'rk', n: 'Cabling', tag: 'CAB', b: 350, r: 1.55, unl: rackOk,
+    val: L => 3 * L, f: v => '+' + v + '% pact speed', note: 'Pacts fill faster' },
+  // the occult: forbidden parts, one small bargain each
+  { id: 'run', cat: 'occ', n: 'Runic etching', tag: 'RUN', b: 500, r: 1.55, unl: S => S.node >= 1 || S.st.reb >= 2,
+    val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Sigils cut into the die' },
+  { id: 'eye', cat: 'occ', n: 'Watching Eye', tag: 'EYE', b: 450, r: 1.55, unl: S => S.node >= 1 || S.st.reb >= 2,
+    val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% tick', note: 'It watches your hand and learns' },
+  { id: 'gar', cat: 'occ', n: 'Gargoyle sink', tag: 'GAR', b: 600, r: 1.6, unl: S => S.node >= 1,
+    val: L => 1.4 * L, f: v => '+' + v.toFixed(1) + '/s', note: 'Stone wings drink the heat' },
+  { id: 'bld', cat: 'occ', n: 'Blood conduit', tag: 'BLD', b: 700, r: 1.6, unl: S => S.st.reb >= 3,
+    val: L => 6 * L, f: v => '+' + v + '% omens', note: 'Omens come sooner and pay more' },
+  { id: 'sol', cat: 'occ', n: 'Soul jar', tag: 'SOL', b: 800, r: 1.65, unl: S => S.st.reb >= 3,
+    val: L => 6 * L, f: v => '+' + v + '% data', note: 'Incantations yield more data' },
+  { id: 'cry', cat: 'occ', n: 'Crypt cache', tag: 'CRY', b: 900, r: 1.7, unl: S => S.st.reb >= 5,
+    val: L => 0.5 * L, f: v => '+' + v.toFixed(1) + ' h', note: 'The chip dreams longer while you are away' },
+  { id: 'hrn', cat: 'occ', n: 'Summoning circle', tag: 'SUM', costs: [2e7, 4e9, 8e11], unl: S => S.node >= 2,
+    val: L => L, f: v => '+' + v + (v === 1 ? ' thread' : ' threads'), note: 'Another mind answers the call' }
+);
+const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1 };
 const RIGM = {}; RIG.forEach(u => { RIGM[u.id] = u; });
 
 // ---------- clients / contracts ----------
@@ -186,11 +212,11 @@ const QP = [
   { id: 'q4',  n: 'Immortal daemons',  d: 'Daemons survive ascension',            c: 3,  fx: M => { M.keepDm = true; } },
   { id: 'q5',  n: 'Superposition II',  d: '×3 cycles',                            c: 5,  req: 'q1', fx: M => { M.g *= 3; } },
   { id: 'q6',  n: 'Parallel worlds',   d: '+2 threads',                           c: 4,  fx: M => { M.thr += 2; } },
-  { id: 'q7',  n: 'Rig memory',        d: 'Rig upgrades survive ascension',       c: 6,  fx: M => { M.keepRig = true; } },
+  { id: 'q7',  n: 'Forge memory',        d: 'Forge upgrades survive ascension',       c: 6,  fx: M => { M.keepRig = true; } },
   { id: 'q8',  n: 'Pre-etched II',     d: 'Ascend into 45nm',                     c: 8,  req: 'q3', fx: M => { M.startNode = Math.max(M.startNode, 4); } },
   { id: 'q9',  n: 'Tunneling II',      d: 'µ gain ×2',                            c: 10, req: 'q2', fx: M => { M.muG *= 2; } },
   { id: 'q10', n: 'Error correction',  d: 'Cooling ×2, heat ceiling +50',         c: 6,  fx: M => { M.coolM *= 2; M.hcap += 50; } },
-  { id: 'q11', n: 'Rack memory',       d: 'Rack sleds and client boards survive ascension', c: 7, fx: M => { M.keepRack = true; } },
+  { id: 'q11', n: 'Rack memory',       d: 'Rack sleds and pact boards survive ascension', c: 7, fx: M => { M.keepRack = true; } },
   { id: 'q12', n: 'Cryo singularity',  d: 'Overclock +1×',                        c: 12, fx: M => { M.oc += 1; } },
   { id: 'q13', n: 'Time dilation',     d: 'Offline limit +24 hours',              c: 10, fx: M => { M.off += 24; } },
   { id: 'q14', n: 'Superposition III', d: '×5 cycles',                            c: 25, req: 'q5', fx: M => { M.g *= 5; } },
@@ -264,7 +290,7 @@ function newState() {
     irq: null, nirq: 70,
     st: { taps: 0, reb: 0, shr: 0, irq: 0, proc: 0, thr: 0, ocT: 0, muAll: 0, cont: 0, boards: 0, asc: 0 },
     set: { bm: 1, sci: false, wake: false, ar: 1 },
-    t: 0, last: Date.now(), sl: 0, dacc: 0, _M: null, _ac: 0, _ev: [], _su: 0
+    t: 0, last: Date.now(), sl: 0, dacc: 0, bf: 0, _M: null, _ac: 0, _ev: [], _su: 0
   };
   recalc(S);
   return S;
@@ -305,6 +331,14 @@ function recalc(S) {
   M.gB *= Math.pow(1.2, L('clu'));
   M.cool += 0.7 * L('fin') + 1.1 * L('fan');
   M.hcap += 5 * L('ceil');
+  M.cool += 0.12 * L('rcl') * Math.min(S.sled, 12 + 2 * L('slt'));
+  M.gA += 0.015 * L('run');
+  M.tapP += 0.015 * L('eye');
+  M.cool += 1.4 * L('gar'); M.hcap += 2 * L('gar');
+  M.irqP *= 1 + 0.06 * L('bld'); M.irqR *= 1 + 0.05 * L('bld');
+  M.dm *= 1 + 0.06 * L('sol');
+  M.off += 0.5 * L('cry');
+  M.thr += L('hrn');
   M.oc += 0.03 * L('vrm');
   M.oc *= M.ocX;
   M.heatX *= 1 + 0.025 * L('clk');
@@ -325,13 +359,15 @@ function genMult(S, i) {
 }
 function muMult(S) { return 1 + 0.35 * Math.sqrt(S.muT); }
 function qMult(S) { return 1 + 0.5 * S.qbT; }
-function sledMult(S) { return 1 + 0.03 * Math.min(12, S.sled); }
+const maxSleds = S => 12 + 2 * (S.rig.slt || 0);
+function sledMult(S) { return 1 + (0.03 + 0.0015 * (S.rig.sld || 0)) * Math.min(maxSleds(S), S.sled); }
 function gMult(S) {
   const M = S._M;
   let m = M.g * M.gA * M.gB * muMult(S) * Math.pow(NODE_MULT, S.node) * (1 + 0.012 * S._ac) * qMult(S) * sledMult(S);
   if (S.oc) m *= M.oc;
   if (S.thr) m *= 0.35;
   if (S.fr > 0) m *= 3;
+  if (S.bf > 0) m *= 2;
   return m;
 }
 function cps(S) {
@@ -433,7 +469,7 @@ function stressLvl(S, key) {
 const ctEta = k => 40 + 20 * k;
 function ctRate(S) {
   const cl = CLIENTS[(S.ct.b * 5 + S.ct.k) % CLIENTS.length];
-  return refRate(S) * (1 + 0.04 * (S.rig.nic || 0)) * (1 + 0.03 * stressLvl(S, cl.key)) * S._M.reqX;
+  return refRate(S) * (1 + 0.04 * (S.rig.nic || 0)) * (1 + 0.03 * stressLvl(S, cl.key)) * (1 + 0.03 * (S.rig.rcb || 0)) * S._M.reqX;
 }
 const ctSize = S => refRate(S) * ctEta(S.ct.k);
 function ctRew(S, k, b) {
@@ -451,7 +487,7 @@ function ctDone(S) {
   ct.k++;
   if (ct.k >= 5) {
     ct.k = 0; ct.b++; S.st.boards++;
-    if (S.sled < 12) S.sled++;
+    if (S.sled < maxSleds(S)) S.sled++;
     log(S, 'Board cleared. A new sled slides into the rack.');
     S._ev.push({ k: 'board' });
   }
@@ -662,9 +698,26 @@ function clickIrq(S) {
   S.irq = null; S.st.irq++;
   const M = S._M, c = cps(S);
   let msg;
+  if (q.k === 'o') { S.irq = q; return omen(S, 2); }
   if (q.k === 'f') { S.fr = 20; msg = 'Interrupt storm: ×3 for 20s'; }
   else if (q.k === 'd') { const v = 8 * dataMult(S) * M.irqP; S.data += v; msg = '+' + fmt(v) + ' data'; }
   else { const v = Math.max(25, c * (45 + Math.random() * 45) * M.irqP); add(S, v); msg = '+' + fmt(v) + ' cycles'; }
+  return msg;
+}
+
+// ---------- omens: a voice in the dark offers three roads ----------
+const OMEN = [
+  { n: 'Take the gift',      d: 'Two minutes of output now. The stone drinks 25% of its heat limit.' },
+  { n: 'Strike the bargain', d: 'Pay a quarter of your cycles. Output ×2 for 40 seconds.' },
+  { n: 'Refuse',             d: 'Walk away with a little data.' }
+];
+function omen(S, i) {
+  if (!S.irq || S.irq.k !== 'o') return '';
+  let msg = '';
+  if (i === 0) { const v = cps(S) * 120; add(S, v); S.heat = Math.min(S._M.hcap * 0.95, S.heat + S._M.hcap * 0.25); msg = 'The gift: +' + fmt(v) + ' cycles'; }
+  else if (i === 1) { if (S.c <= 0) return ''; S.c *= 0.75; S.bf = 40; msg = 'Bargain struck: ×2 output for 40s'; }
+  else { const v = 4 * dataMult(S); S.data += v; msg = 'Refused: +' + fmt(v) + ' data'; }
+  S.irq = null; S.st.irq++; S.st.omen = (S.st.omen || 0) + 1;
   return msg;
 }
 
@@ -674,16 +727,16 @@ const GOALS = [
   { id: 'g1',  tag: 'TICK',   t: 'Tick the clock 10 times',                      m: 10,   cur: S => S.st.taps },
   { id: 'g2',  tag: 'UNITS',  t: 'Buy 5 Transistors',                            m: 5,    cur: S => S.g[0] },
   { id: 'g3',  tag: 'UNITS',  t: 'Buy a Logic Gate',                             m: 1,    cur: S => S.g[1] },
-  { id: 'g4',  tag: 'RIG',    t: 'Upgrade the Clock 3 times (Rig, Compute)',     m: 3,    cur: S => rigLv(S, 'clk') },
+  { id: 'g4',  tag: 'RIG',    t: 'Upgrade the Clock 3 times (Forge, Compute)',     m: 3,    cur: S => rigLv(S, 'clk') },
   { id: 'g5',  tag: 'UNITS',  t: 'Own 10 ALUs',                                  m: 10,   cur: S => S.g[2] },
   { id: 'g6',  tag: 'GROW',   t: 'Reach 20K cycles to unlock overclock',         m: 2e4,  cur: S => S.tot, big: 1 },
-  { id: 'g7',  tag: 'HEAT',   t: 'Overclock for 15 seconds (Rig, Thermal)',      m: 15,   cur: S => S.st.ocT },
-  { id: 'g8',  tag: 'GROW',   t: 'Reach 100K cycles to open Work and Lab',       m: 1e5,  cur: S => S.tot, big: 1 },
-  { id: 'g9',  tag: 'WORK',   t: 'Finish 3 processes (Work, Processes)',         m: 3,    cur: S => S.st.proc },
-  { id: 'g10', tag: 'LAB',    t: 'Buy a research (Lab)',                         m: 1,    cur: S => cnt(S.res) },
-  { id: 'g11', tag: 'WORK',   t: 'Finish a client contract (Work, Clients)',     m: 1,    cur: S => S.st.cont },
+  { id: 'g7',  tag: 'HEAT',   t: 'Overclock for 15 seconds (Forge, Thermal)',      m: 15,   cur: S => S.st.ocT },
+  { id: 'g8',  tag: 'GROW',   t: 'Reach 100K cycles to open Rites and the Grimoire',       m: 1e5,  cur: S => S.tot, big: 1 },
+  { id: 'g9',  tag: 'WORK',   t: 'Finish 3 processes (Rites, Incantations)',         m: 3,    cur: S => S.st.proc },
+  { id: 'g10', tag: 'LAB',    t: 'Buy a research (Grimoire)',                         m: 1,    cur: S => cnt(S.res) },
+  { id: 'g11', tag: 'WORK',   t: 'Finish a client contract (Rites, Pacts)',     m: 1,    cur: S => S.st.cont },
   { id: 'g12', tag: 'RIG',    t: 'Upgrade the Heatsink 3 times',                 m: 3,    cur: S => rigLv(S, 'fin') },
-  { id: 'g13', tag: 'RIG',    t: 'Upgrade the NIC 3 times (Rig, Ingress)',       m: 3,    cur: S => rigLv(S, 'nic') },
+  { id: 'g13', tag: 'RIG',    t: 'Upgrade the NIC 3 times (Forge, Ingress)',       m: 3,    cur: S => rigLv(S, 'nic') },
   { id: 'g14', tag: 'RACK',   t: 'Clear a board: 5 contracts in a row',          m: 5,    cur: S => S.st.boards ? 5 : S.ct.k },
   { id: 'g15', tag: 'GROW',   t: 'Reach 200M cycles in one run',                 m: 2e8,  cur: S => S.run, big: 1 },
   { id: 'g16', tag: 'REBIRTH', t: 'Reboot for microcode (Rebirth)',              m: 1,    cur: S => S.st.reb },
@@ -715,13 +768,15 @@ function checkGoals(S, silent) {
 
 // ---------- contextual hints ----------
 function hint(S) {
-  if (S.thr) return { tag: 'HEAT', tone: 'red', t: 'Throttled. Output is cut until heat falls to 25%. Cooling lives in Rig, Thermal.' };
+  if (S.thr) return { tag: 'HEAT', tone: 'red', t: 'Throttled. Output is cut until heat falls to 25%. Cooling lives in Forge, Thermal.' };
   if (S.oc && heatPct(S) > 80) return { tag: 'HEAT', tone: 'red', t: 'Heat is ' + Math.round(heatPct(S)) + '%. Disengage overclock or run fsck before it throttles.' };
+  if (S.bf > 0) return { tag: 'BARGAIN', tone: 'amb', t: 'The bargain holds: output doubled for ' + Math.ceil(S.bf) + 's.' };
+  if (S.irq && S.irq.k === 'o') return { tag: 'OMEN', tone: 'amb', t: 'A voice offers three roads. Tap the glowing omen to choose.' };
   if (S.irq) return { tag: 'EVENT', tone: 'amb', t: 'An interrupt is waiting. Tap the chip at the bottom of the screen.' };
   if (canAscend(S) && S.un.asc) return { tag: 'ASCEND', tone: 'teal', t: 'You can ascend for ' + qGain(S) + ' qubits. It resets microcode and the die.' };
   if (canShrink(S)) return { tag: 'SHRINK', tone: 'teal', t: 'A die shrink is ready: ' + NODES[S.node] + ' to ' + NODES[S.node + 1] + '.' };
   if (S.un.rb && muGain(S) >= Math.max(2, 0.5 * S.muT)) return { tag: 'READY', tone: 'grn', t: 'Reboot now for +' + muGain(S) + ' microcode.' };
-  if (S.un.pr && S.q.length < S._M.thr && !dOn(S, 'scribe') && S.c > 0) return { tag: 'IDLE', tone: 'amb', t: 'A thread is idle. Run a process in Work to earn data.' };
+  if (S.un.pr && S.q.length < S._M.thr && !dOn(S, 'scribe') && S.c > 0) return { tag: 'IDLE', tone: 'amb', t: 'A thread is idle. Cast an incantation in Rites to earn data.' };
   if (S.un.oc && !S.oc && !S.thr && heatPct(S) < 20 && !dOn(S, 'frost') && !S._M.noOC) return { tag: 'TIP', tone: 'dim', t: 'Overclock multiplies every cycle. Engage it while heat is low.' };
   if (S.data >= 10 && RES.some(r => !S.res[r.id] && (!r.req || S.res[r.req]) && S.data >= r.c)) return { tag: 'LAB', tone: 'grn', t: 'You have enough data for a research.' };
   return { tag: 'TIP', tone: 'dim', t: 'Milestones double a unit at 25, 50, 100 and 200 owned.' };
@@ -731,16 +786,16 @@ function hint(S) {
 const HELP = [
   { id: 'basics', t: 'The basics', u: S => true,
     b: 'Tick the clock to push cycles through the silicon. Spend cycles on units. Each tier boosts the tier below it a little, and owning 25, 50, 100 and 200 of a unit doubles its output. New parts of the machine appear as you grow, so keep an eye out for outlines on the schematic.' },
-  { id: 'rig', t: 'Rig upgrades', u: S => S.un.cmp,
-    b: 'Rig upgrades are levelled parts: Compute raises output, Thermal lets you overclock longer, Ingress speeds up client work, Power adds efficiency. They stay when you reboot or shrink. A die shrink raises every level cap by 4 and makes the next levels cost more. The tile marked Best buy gives the most output for its price.' },
+  { id: 'rig', t: 'The Forge', u: S => S.un.cmp,
+    b: 'Forge upgrades are levelled parts: Compute raises output, Thermal lets you overclock longer, Ingress speeds up client work, Power adds efficiency. They stay when you reboot or shrink. A die shrink raises every level cap by 4 and makes the next levels cost more. The tile marked Best buy gives the most output for its price.' },
   { id: 'oc', t: 'Overclock and heat', u: S => S.un.oc,
     b: 'Overclock multiplies all cycles but builds heat. At 100% heat the chip throttles: output drops to 35% until heat falls to 25%. Cool it with heatsinks, fans, research or the fsck process. The Daemon of Frost handles this for you.' },
-  { id: 'proc', t: 'Processes and threads', u: S => S.un.pr,
-    b: 'Processes cost cycles and run on threads. Most give data, which pays for research. fsck cools the chip, cron pays back cycles. You start with a few threads and gain more from research, die shrinks and rebirth upgrades.' },
-  { id: 'lab', t: 'Lab', u: S => S.un.pr,
+  { id: 'proc', t: 'Incantations and threads', u: S => S.un.pr,
+    b: 'Incantations cost cycles and run on threads. Most give data, which pays for research. fsck cools the chip, cron pays back cycles. You start with a few threads and gain more from research, die shrinks and rebirth upgrades.' },
+  { id: 'lab', t: 'The Grimoire', u: S => S.un.pr,
     b: 'Research is bought with data and is permanent until a die shrink. Once the main tree is done, repeatable research keeps data useful. Data also pays for speeding up client contracts.' },
-  { id: 'ct', t: 'Clients and the rack', u: S => S.un.ct,
-    b: 'Clients send contract work in boards of five. Finishing a contract pays cycles and data. Each client stresses one part of your rig and works faster when that part is upgraded. Clear a board to slide a sled into the rack: each sled adds 3% cycles, up to 12 sleds.' },
+  { id: 'ct', t: 'Pacts and the rack', u: S => S.un.ct,
+    b: 'Patrons offer pacts in boards of five. Finishing a contract pays cycles and data. Each client stresses one part of your rig and works faster when that part is upgraded. Clear a board to slide a sled into the rack: each sled adds 3% cycles, up to 12 sleds.' },
   { id: 'reboot', t: 'Reboot', u: S => S.un.rb,
     b: 'Reboot resets cycles, units and heat, and pays microcode based on this run. Microcode multiplies your cycles for good and buys upgrades in the Shop. Wait until the reward is meaningfully bigger than what you already have.' },
   { id: 'modes', t: 'Boot modes', u: S => S.st.reb >= 5,
@@ -749,6 +804,12 @@ const HELP = [
     b: 'Daemons are bound with microcode and keep working through reboots and shrinks. They automate buying, ticking, processes, overclocking, research, interrupts and rebooting. You can switch each one off.' },
   { id: 'shrink', t: 'Die shrink', u: S => S.un.rb,
     b: 'A die shrink makes the process node finer. It gives ×2.5 cycles, unlocks new units, processes and threads, and raises rig caps. It resets the run, research and the shop, but refunds the microcode you spent there. The next shrink needs more lifetime microcode.' },
+  { id: 'rack', t: 'The rack', u: S => S.sled > 0 || S.st.boards > 0,
+    b: 'Every cleared pact board slides a sled into the rack. FORGE, Rack upgrades make each sled stronger, add bays for more sleds, cool the chip and speed up pacts.' },
+  { id: 'occult', t: 'The Occult', u: S => S.node >= 1 || S.st.reb >= 2,
+    b: 'Forbidden parts in FORGE, Occult: runic etching, a watching eye, a gargoyle heatsink, blood conduits, soul jars, a crypt cache and a summoning circle that adds threads. More of them open as you reboot and shrink the die.' },
+  { id: 'omen', t: 'Omens', u: S => S.un.pr,
+    b: 'Now and then a voice offers a choice instead of a plain reward. Take the gift for a burst of cycles at the cost of heat, strike a bargain to double output for a short time at the cost of a quarter of your cycles, or refuse and keep a little data. The Daemon of Mirrors refuses for you.' },
   { id: 'asc', t: 'Ascension', u: S => S.un.asc,
     b: 'Ascension burns all your microcode, upgrades and the die into qubits. Qubits give a permanent bonus and buy perks that make every later climb faster: starting at a finer node, keeping daemons or the rig, and strong multipliers. Spend them before you start the next climb.' }
 ];
@@ -793,6 +854,7 @@ function tick(S, dt) {
   if (S.heat < 0) S.heat = 0;
   if (S.heat > hc) S.heat = hc;
   if (S.fr > 0) S.fr = Math.max(0, S.fr - dt);
+  if (S.bf > 0) S.bf = Math.max(0, S.bf - dt);
 
   // tasks
   for (let i = S.q.length - 1; i >= 0; i--) {
@@ -810,8 +872,8 @@ function tick(S, dt) {
     S.nirq -= dt * M.irqR;
     if (S.nirq <= 0) {
       const r = Math.random();
-      const k = r < 0.55 ? 'b' : r < 0.8 ? (S.un.pr ? 'd' : 'b') : 'f';
-      S.irq = { k, l: 15 }; S.nirq = 70 + Math.random() * 70;
+      const k = r < 0.5 ? 'b' : r < 0.72 ? (S.un.pr ? 'd' : 'b') : r < 0.88 ? 'f' : (S.un.pr ? 'o' : 'b');
+      S.irq = { k, l: k === 'o' ? 30 : 15 }; S.nirq = 70 + Math.random() * 70;
     }
   }
 
@@ -850,7 +912,7 @@ const CORE = {
   MS, GENS, NODES, REQ, PROCS, RES, RR, SHOP, DAEMONS, ACH, PM, ARS, NODE_MULT, RIG, RIGM, CLIENTS, STRESS_NAME,
   MODES, MODE_IDS, MIL, QP, GOALS, HELP, ASC_MU, costScale, permMult,
   fmt, fmtI, newState, serialize, deserialize, recalc, log,
-  cps, gMult, genMult, muMult, qMult, sledMult, genProd, tapValue, tap, cost, maxBuy, genAvail, buyGen, toggleOC, dataMult, dmBase, heatPct,
+  cps, gMult, genMult, muMult, qMult, sledMult, maxSleds, genProd, tapValue, tap, cost, maxBuy, genAvail, buyGen, toggleOC, dataMult, dmBase, heatPct,
   rigLv, rigTotal, rigCap, rigCost, rigVal, rigDelta, buyRig, refRate, stressLvl,
   rrCap, rrCost, rrOpen, buyRR,
   ctInfo, ctRate, ctSize, ctEta, speedCost, speedUp, ctWork,
@@ -858,7 +920,7 @@ const CORE = {
   dGreed, dRig, taskReserve, dScribe, dHunger, dFrost, dCycle,
   muGain, muNext, reboot, setMode, canShrink, nodeNote, shrink,
   qGain, qNext, canAscend, ascend, buyQP,
-  clickIrq, goalInfo, goalReward, checkGoals, hint, slow, tick, offline, advance, add
+  clickIrq, omen, OMEN, goalInfo, goalReward, checkGoals, hint, slow, tick, offline, advance, add
 };
 if (typeof module === 'object' && module.exports) module.exports = CORE; else root.CORE = CORE;
 })(typeof window !== 'undefined' ? window : globalThis);

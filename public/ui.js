@@ -66,15 +66,15 @@ function floatTxt(x, y, t) {
 
 // ---------- shell: tabs and subtabs ----------
 const TABS = [
-  { id: 'rig', n: 'RIG', ok: () => true },
-  { id: 'work', n: 'WORK', ok: () => S.un.pr || S.un.ct },
-  { id: 'lab', n: 'LAB', ok: () => S.un.pr },
+  { id: 'rig', n: 'FORGE', ok: () => true },
+  { id: 'work', n: 'RITES', ok: () => S.un.pr || S.un.ct },
+  { id: 'lab', n: 'GRIMOIRE', ok: () => S.un.pr },
   { id: 'rebirth', n: 'REBIRTH', ok: () => S.un.rb },
-  { id: 'more', n: 'MORE', ok: () => true }
+  { id: 'more', n: 'CODEX', ok: () => true }
 ];
 const SUBS = {
-  rig: [['units', 'Units', () => true], ['cmp', 'Compute', () => S.un.cmp], ['th', 'Thermal', () => S.un.oc], ['ing', 'Ingress', () => S.un.ct], ['pw', 'Power', () => S.un.pw]],
-  work: [['procs', 'Processes', () => S.un.pr], ['cl', 'Clients', () => S.un.ct]],
+  rig: [['units', 'Units', () => true], ['cmp', 'Compute', () => S.un.cmp], ['th', 'Thermal', () => S.un.oc], ['ing', 'Ingress', () => S.un.ct], ['pw', 'Power', () => S.un.pw], ['rk', 'Rack', () => S.sled > 0 || S.st.boards > 0], ['occ', 'Occult', () => S.node >= 1 || S.st.reb >= 2]],
+  work: [['procs', 'Incantations', () => S.un.pr], ['cl', 'Pacts', () => S.un.ct]],
   lab: [],
   rebirth: [['reboot', 'Reboot', () => S.un.rb], ['shop', 'Shop', () => S.un.rb], ['dm', 'Daemons', () => S.un.dm], ['shr', 'Shrink', () => S.un.rb], ['asc', 'Ascend', () => S.un.asc]],
   more: [['stats', 'Stats', () => true], ['guide', 'Guide', () => true], ['seals', 'Seals', () => true], ['log', 'Chronicle', () => true], ['set', 'Settings', () => true]]
@@ -188,9 +188,9 @@ function vRig(cat) {
   return {
     sig: () => items.map(u => u.unl(S) ? 1 : 0).join() + C.NODES[S.node],
     build(r) {
-      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power' };
+      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'Rack', occ: 'The Occult' };
       r.append(h('h2', '', titles[cat]));
-      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.' };
+      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.' };
       r.append(h('div', 'note', hints[cat]));
       const g = h('div', 'grid'); r.append(g);
       items.forEach(u => {
@@ -237,8 +237,8 @@ function vProcs() {
         const s = h('div', 'slot'); const sn = h('span', 'sn'), sb = h('div', 'sb'), si = h('i'), sp = h('span', 'sp'); sb.append(si); s.append(sn, sb, sp); r.append(s);
         slots.push({ sn, si, sp });
       }
-      r.append(h('h2', '', 'Processes'));
-      r.append(h('div', 'note', 'Processes cost cycles and run on a free thread. Most pay data for the Lab.'));
+      r.append(h('h2', '', 'Incantations'));
+      r.append(h('div', 'note', 'Incantations cost cycles and run on a free thread. Most pay data for the Grimoire.'));
       ps().forEach(p => {
         const row = h('div', 'row'), info = h('div', 'info');
         const rw = p.r.data ? '+' + 'data' : p.r.cool ? 'cools ' + p.r.cool + '%' : 'bursts cycles';
@@ -272,8 +272,8 @@ function vClients() {
   return {
     sig: () => 'c',
     build(r) {
-      r.append(h('h2', '', 'Client board'));
-      r.append(h('div', 'note', 'Clients send requests on their own, even while you are away. Each contract is a pile of requests; when the bar fills, you are paid cycles and data. Five contracts make one board. Clear a board and a sled slides into your rack (+3% cycles each, max 12). Upgrading Ingress parts (NIC, balancer, edge cache) makes contracts fill faster and pay more. You do not need to tap anything.'));
+      r.append(h('h2', '', 'Pact board'));
+      r.append(h('div', 'note', 'Patrons send requests on their own, even while you are away. Each pact is a pile of requests; when the bar fills, you are paid cycles and data. Five pacts make one board. Clear a board and a sled slides into your rack (+3% cycles each, max 12). Upgrading Ingress parts (NIC, balancer, edge cache) makes contracts fill faster and pay more. You do not need to tap anything.'));
       const bd = h('div', 'board'); for (let k = 0; k < 5; k++) { const n = h('div', 'node', '#' + (k + 1)); n.append(h('i')); bd.append(n); nodes.push(n); } r.append(bd);
       const p = h('div', 'panel');
       p.append(h('div', 'prow')); const pr = p.firstChild; const cn = h('b', 'tl'), st = h('span', 'sub'); pr.append(cn, st);
@@ -284,7 +284,7 @@ function vClients() {
       p.append(ds, bar, rw, sp, sb); r.append(p);
       r.append(h('h2', '', 'Rack'));
       const rk = h('div', 'panel'); const rs = h('div', 'sub'); rk.append(rs); r.append(rk);
-      r.append(h('div', 'note', 'Clear a board of five contracts to slide a sled into the rack. Each sled adds 3% cycles (max 12). Upgrade the part a client stresses to finish faster.'));
+      r.append(h('div', 'note', 'Clear a board of five contracts to slide a sled into the rack. Each sled adds cycles; bays cap how many fit. Upgrade the rack in FORGE, Rack. Upgrade the part a client stresses to finish faster.'));
       this.e = { cn, st, ds, bi, rw, sp, sb, sbs, sbl, rs };
     },
     upd() {
@@ -296,7 +296,7 @@ function vClients() {
       setT(E.sp, F(i.rate) + ' req/s · ' + (i.left < 1 ? '<1' : Math.ceil(i.left)) + 's left');
       setT(E.sbs, S._su > 0 ? 'COOLING ' + Math.ceil(S._su) + 's' : 'SURGE ' + F(C.speedCost(S)) + ' data'); setT(E.sbl, 'Instantly push 20s of requests');
       setC(E.sb, 'off', S._su > 0 || S.data < C.speedCost(S));
-      setT(E.rs, 'Sleds ' + S.sled + '/12 · +' + 3 * Math.min(12, S.sled) + '% cycles · boards cleared ' + S.st.boards);
+      setT(E.rs, 'Sleds ' + S.sled + '/' + C.maxSleds(S) + ' · +' + ((C.sledMult(S) - 1) * 100).toFixed(1) + '% cycles · boards cleared ' + S.st.boards + ' · upgrade it in FORGE, Rack');
     }
   };
 }
@@ -490,7 +490,7 @@ function vStats() {
       [['Total cycles', () => F(S.tot)], ['This run', () => F(S.run)], ['Output', () => F(C.cps(S)) + '/s'], ['Play time', () => fmtTime(S.t)],
        ['Ticks', () => FI(S.st.taps)], ['Reboots', () => FI(S.st.reb)], ['Die shrinks', () => FI(S.st.shr)], ['Ascensions', () => FI(S.st.asc)],
        ['Microcode earned', () => FI(S.st.muAll)], ['Tasks done', () => FI(S.st.proc)], ['Contracts', () => FI(S.st.cont)], ['Boards cleared', () => FI(S.st.boards)],
-       ['Interrupts', () => FI(S.st.irq)], ['Throttles', () => FI(S.st.thr)], ['Overclocked', () => fmtTime(S.st.ocT)], ['Rig levels', () => FI(C.rigTotal(S))],
+       ['Interrupts', () => FI(S.st.irq)], ['Omens heeded', () => FI(S.st.omen || 0)], ['Throttles', () => FI(S.st.thr)], ['Overclocked', () => fmtTime(S.st.ocT)], ['Forge levels', () => FI(C.rigTotal(S))],
        ['Seal bonus', () => '+' + (1.2 * S._ac).toFixed(1) + '%'], ['Offline cap', () => S._M.off.toFixed(1) + ' h']
       ].forEach(([k, f]) => { const a = h('span', '', k), b = h('span'); g.append(a, b); keys.push([b, f]); });
     },
@@ -565,27 +565,45 @@ function vSettings() {
 
 // ---------- onboarding and coach ----------
 const INTRO = [
-  { t: 'Boot sequence', b: 'You are a dead processor. Every cycle you earn pushes a little more current through the silicon. Tap TICK CLOCK to start.', skip: 1 },
-  { t: 'Spend cycles on units', b: 'Open RIG, then Units. Buy Transistors, then Logic Gates and beyond. Each tier feeds the one below it, and 25, 50, 100 and 200 owned doubles a unit.' },
+  { t: 'The silicon wakes', b: 'You are a dead processor: a dark slab of silicon sleeping beneath the stone. Every cycle you earn wakes something older inside it. Tick the clock to begin.', skip: 1 },
+  { t: 'Spend cycles on units', b: 'Open the FORGE, then Units. Buy Transistors, then Logic Gates and beyond. Each tier feeds the one below it, and 25, 50, 100 and 200 owned doubles a unit.' },
   { t: 'The schematic grows', b: 'The panel at the top is your machine. Outlines are parts you have not built yet. New modules appear as you buy upgrades and reach new totals.' },
-  { t: 'Follow the goal bar', b: 'The bar under the header always shows the next goal, with a small reward. The tip line under it reacts to what is happening. Everything is explained in MORE, Guide.', ok: 'Start' }
+  { t: 'Follow the goal bar', b: 'The bar under the header always shows the next goal, with a small reward. The tip line under it reacts to what is happening. Everything is explained in the CODEX, Guide.', ok: 'Start' }
 ];
 function intro() { modal(INTRO, () => { S.tut.intro = 1; save(); }); }
 const COACH = [
-  ['cmp', () => S.un.cmp, 'Rig online', 'RIG now has a Compute tab. Upgrade Clock and Cores: each tile shows the value before and after. A new Clock module just appeared on the schematic.'],
+  ['cmp', () => S.un.cmp, 'The Forge stirs', 'The FORGE now has a Compute tab. Upgrade Clock and Cores: each tile shows the value before and after. A new Clock module just appeared on the schematic.'],
   ['oc', () => S.un.oc, 'Overclock', 'The OVERCLOCK button multiplies all output but builds heat. At 100% heat the chip throttles. Thermal upgrades (heatsink, fans) let you push longer. Airflow modules have spawned on the schematic.'],
-  ['pr', () => S.un.pr, 'Threads and the lab', 'WORK runs processes on threads for data, and LAB spends data on permanent research. Keep every thread busy.'],
-  ['ct', () => S.un.ct, 'Clients arrive', 'WORK, Clients: finish contracts in boards of five. A NIC module is now on the schematic. Clear boards to slide sleds into the rack for a permanent bonus.'],
-  ['pw', () => S.un.pw, 'Clean power', 'RIG now has a Power tab. PSU and VRM upgrades raise output and overclock strength.'],
+  ['pr', () => S.un.pr, 'Rites and the Grimoire', 'RITES casts incantations on threads for data, and the GRIMOIRE spends data on permanent research. Keep every thread busy.'],
+  ['ct', () => S.un.ct, 'Patrons arrive', 'RITES, Pacts: finish pacts in boards of five. A NIC module is now on the schematic. Clear boards to slide sleds into the rack for a permanent bonus.'],
+  ['pw', () => S.un.pw, 'Clean power', 'The FORGE now has a Power tab. PSU and VRM upgrades raise output and overclock strength.'],
   ['rb', () => S.un.rb, 'Reboot', 'REBIRTH lets you reboot: reset the run for microcode that multiplies everything for good. The first reboot is best done once the reward is more than a trickle.'],
   ['dm', () => S.un.dm, 'Daemons', 'Microcode can bind daemons that automate the game: buying, ticking, overclock, research and more. They survive reboots.'],
   ['bd', () => S.g[8] > 0, 'Board view', 'A Chiplet appeared. The schematic now has a BOARD view, and later a RACK view, selectable on its top-left corner.'],
   ['shr', () => S.node >= 1, 'Finer stone', 'The die is smaller. Units from higher tiers unlock per node, rig caps rise by 4, and the cost of future upgrades climbs with your power.'],
+  ['rk', () => S.sled > 0 || S.st.boards > 0, 'The rack is yours', 'Your first sled slid into the rack. FORGE now has a Rack tab: richer sleds, more bays, cold aisles and faster pacts.'],
+  ['occ', () => S.node >= 1 || S.st.reb >= 2, 'The Occult', 'The old stone whispers. FORGE now has an Occult tab with forbidden parts: runic etching, a watching eye, a gargoyle heatsink, and more that wake as you reboot and shrink the die.'],
   ['asc', () => S.un.asc, 'Ascension', 'You are close to the third reset. REBIRTH, Ascend turns lifetime microcode into qubits: permanent multipliers and perks that let you restart further along.']
 ];
 function coachCheck() {
   if (modalOpen || !S.tut.intro) return;
   for (const c of COACH) if (!S.tut.seen[c[0]] && c[1]()) { S.tut.seen[c[0]] = 1; modal({ t: c[2], b: c[3] }); save(); return; }
+}
+
+function omenModal() {
+  if (modalOpen) return; modalOpen = true;
+  const m = $('#modal'); m.innerHTML = '';
+  const b = h('div', 'box'); b.append(h('h3', '', 'A voice in the dark'));
+  b.append(h('p', '', 'The silicon hums a tune no one taught it. Three roads open before you.'));
+  C.OMEN.forEach((o, i) => {
+    const btn = h('button', i === 1 ? 'bigbtn v' : 'bigbtn');
+    btn.style.cssText = 'margin:6px 0;text-align:left;padding:10px 12px';
+    btn.append(h('div', '', o.n.toUpperCase())); const sm = h('small', '', o.d); sm.style.cssText = 'display:block;font:italic 400 12px var(--lore);letter-spacing:0;text-transform:none;margin-top:3px;opacity:.85'; btn.append(sm);
+    btn.onclick = () => { const msg = C.omen(S, i); closeModal(); if (msg) { toast(msg); SCENE.pulse('board'); } };
+    b.append(btn);
+  });
+  const later = h('button', '', 'Leave it'); later.style.cssText = 'width:100%;margin-top:4px'; later.onclick = closeModal; b.append(later);
+  m.append(b); m.hidden = false;
 }
 
 // ---------- scene views ----------
@@ -602,6 +620,7 @@ function renderViews() {
 }
 
 // ---------- HUD ----------
+const TITLES = ['Dormant Shard', 'Stirring Shard', 'Awakened Slab', 'Hungering Slab', 'Shaper of Light', 'Whispering Die', 'Burning Die', 'Ancient Wafer', 'Vast Wafer', 'Eldritch Wafer', 'Abyssal Wafer', 'Primordial Wafer', 'Sovereign Mind'];
 const el = { cyc: $('#cyc'), cps: $('#cps'), mult: $('#mult'), heatv: $('#heatv'), heat: $('#heatbar'), node: $('#node'), gtag: $('#gtag'), gtxt: $('#gtxt'), gnum: $('#gnum'), gfill: $('#gfill'), goal: $('#goal'),
   hc: $('#hintchip'), htag: $('#htag'), htxt: $('#htxt'), tick: $('#tickbtn'), tickv: $('#tickv'), oc: $('#ocbtn'), ocv: $('#ocv'), irq: $('#irq') };
 function hud() {
@@ -612,7 +631,7 @@ function hud() {
   const hp = C.heatPct(S);
   setT(el.heatv, Math.round(hp) + '%' + (S.thr ? ' THROTTLE' : ''));
   el.heat.style.width = hp + '%'; el.heat.style.background = S.thr ? 'var(--red)' : hp > 70 ? 'var(--amb)' : 'var(--grn)';
-  setT(el.node, C.NODES[S.node] + (S.qbT ? ' · Q' + S.qbT : ''));
+  setT(el.node, C.NODES[S.node] + ' · ' + TITLES[S.node] + (S.qbT ? ' · Q' + S.qbT : ''));
   const gi = C.goalInfo(S);
   show(el.goal, !!gi);
   if (gi) { setT(el.gtag, gi.g.tag); setT(el.gtxt, gi.g.t); setT(el.gnum, gi.g.big ? F(gi.cur) + '/' + F(gi.max) : gi.cur + '/' + gi.max); el.gfill.style.width = pct(gi.cur, gi.max) + '%'; }
@@ -624,8 +643,8 @@ function hud() {
     setT(el.ocv, S._M.noOC ? 'LOCKED' : S.thr ? 'THROTTLED' : S.oc ? 'ON ×' + S._M.oc.toFixed(2) : 'OFF');
     setC(el.oc, 'on', S.oc); setC(el.oc, 'thr', S.thr);
   }
-  show(el.irq, !!S.irq);
-  if (S.irq) setT(el.irq, (S.irq.k === 'f' ? 'STORM' : S.irq.k === 'd' ? 'DATA PACKET' : 'INTERRUPT') + ' · TAP ' + Math.ceil(S.irq.l) + 's');
+  el.irq.hidden = !S.irq;
+  if (S.irq) setT(el.irq, (S.irq.k === 'o' ? 'AN OMEN' : S.irq.k === 'f' ? 'STORM' : S.irq.k === 'd' ? 'DATA PACKET' : 'INTERRUPT') + ' · TAP ' + Math.ceil(S.irq.l) + 's');
 }
 
 // ---------- events ----------
@@ -646,7 +665,10 @@ function init() {
   tp.addEventListener('pointerdown', e => { e.preventDefault(); const v = C.tap(S); floatTxt(e.clientX, e.clientY, '+' + F(v)); });
   tp.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); C.tap(S); } });
   el.oc.onclick = () => { if (!C.toggleOC(S)) toast(S._M.noOC ? 'Overclock is locked' : 'Chip is throttled'); };
-  el.irq.onclick = () => { const m = C.clickIrq(S); if (m) { toast(m); SCENE.pulse('job'); } };
+  el.irq.onclick = () => {
+    if (S.irq && S.irq.k === 'o') { omenModal(); return; }
+    const m = C.clickIrq(S); if (m) { toast(m); SCENE.pulse('job'); }
+  };
   $('#fold').onclick = () => { const s = $('#stage'); s.classList.toggle('fold'); $('#fold').textContent = s.classList.contains('fold') ? '▾' : '▴'; };
   // away time
   const away = (Date.now() - S.last) / 1000;
