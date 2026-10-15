@@ -12,6 +12,9 @@ function views(St) {
   const v = ['chip'];
   if (St.g[8] > 0 || St.node >= 1) v.push('board');
   if (St.sled > 0 || St.st.boards > 0) v.push('rack');
+  if (St.node >= 2) v.push('crypt');
+  if (St.node >= 4) v.push('altar');
+  if (St.node >= 6) v.push('abyss');
   return v;
 }
 function pulse(kind) { bursts.push({ t: T, k: kind }); if (bursts.length > 6) bursts.shift(); }
@@ -254,6 +257,169 @@ function rackView() {
   ring(COL.amb, 40, 90);
 }
 
+// ---- THE CRYPT: coffins, bone ribs, ravens, ghoul archivists ----
+const STONE = '#3a3732', GOLDD = '#6a5a3a';
+function ghostRing(x, y, r) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.stroke(); cx.setLineDash([]); }
+function cryptView() {
+  const L = id => S.rig[id] || 0;
+  box(6, 14, 348, 176, 1, { label: 'THE CRYPT · ARCHIVE', val: 'DATA ×' + S._M.dm.toFixed(2), stroke: STONE, fill: '#09090b' });
+  cx.strokeStyle = STONE; cx.lineWidth = 2; cx.beginPath(); cx.arc(180, 168, 132, Math.PI, 0); cx.stroke(); cx.lineWidth = 1;
+  cx.beginPath(); cx.moveTo(48, 168); cx.lineTo(48, 172); cx.moveTo(312, 168); cx.lineTo(312, 172); cx.moveTo(20, 172); cx.lineTo(340, 172); cx.stroke();
+  // ribs hanging from the arch
+  for (let i = 0; i < 6; i++) {
+    const th = Math.PI + 0.55 + i * (Math.PI - 1.1) / 5, px = 180 + 132 * Math.cos(th), py = 168 + 132 * Math.sin(th);
+    const own = i < L('bon'), next = i === L('bon');
+    if (!own && !next) continue;
+    const a = own ? pop('bon' + i, true) : 0.7;
+    cx.globalAlpha = a; cx.strokeStyle = own ? '#bdb8ad' : COL.line; cx.setLineDash(own ? [] : [2, 2]);
+    cx.beginPath(); cx.moveTo(px, py); cx.quadraticCurveTo(px + (180 - px) * 0.25, py + 8, px + (180 - px) * 0.12, py + 30); cx.stroke();
+    if (own) for (let k = 1; k < 4; k++) { const f = k / 4; cx.beginPath(); cx.moveTo(px + (180 - px) * 0.1 * f - 3, py + 30 * f); cx.lineTo(px + (180 - px) * 0.1 * f + 3, py + 30 * f); cx.stroke(); }
+    cx.setLineDash([]); cx.globalAlpha = 1;
+  }
+  // ravens perched on the arch
+  for (let i = 0; i < 8; i++) {
+    const th = Math.PI + 0.3 + i * (Math.PI - 0.6) / 7, px = 180 + 138 * Math.cos(th), py = 168 + 138 * Math.sin(th);
+    if (i < L('rat')) {
+      const a = pop('rat' + i, true), bob = Math.sin(T / 700 + i * 2) * 0.8;
+      cx.save(); cx.globalAlpha = a; cx.translate(px, py - 2 + bob);
+      cx.fillStyle = '#16161a'; cx.beginPath(); cx.ellipse(0, 0, 5, 3, 0, 0, 6.283); cx.fill();
+      cx.beginPath(); cx.arc(4, -2.5, 2, 0, 6.283); cx.fill();
+      cx.fillStyle = COL.amb; cx.beginPath(); cx.moveTo(5.5, -2.8); cx.lineTo(8.5, -2); cx.lineTo(5.5, -1.4); cx.fill();
+      cx.fillStyle = COL.red; cx.fillRect(4, -3, 1, 1);
+      cx.restore();
+    } else if (i === L('rat')) ghostRing(px, py - 2, 4);
+  }
+  // coffins on the floor
+  for (let i = 0; i < 8; i++) {
+    const x = 62 + i * 30, y = 156, w = 24, h = 14;
+    if (i < L('cof')) {
+      const a = pop('cof' + i, true); cx.globalAlpha = a;
+      cx.fillStyle = '#14110e'; cx.strokeStyle = GOLDD; cx.beginPath(); cx.moveTo(x + 4, y); cx.lineTo(x + w - 4, y); cx.lineTo(x + w, y + 5); cx.lineTo(x + w - 3, y + h); cx.lineTo(x + 3, y + h); cx.lineTo(x, y + 5); cx.closePath(); cx.fill(); cx.stroke();
+      cx.strokeStyle = hot; cx.globalAlpha = a * (0.4 + 0.4 * Math.sin(T / 600 + i)); cx.beginPath(); cx.moveTo(x + w / 2, y + 3); cx.lineTo(x + w / 2, y + 11); cx.moveTo(x + w / 2 - 3, y + 6); cx.lineTo(x + w / 2 + 3, y + 6); cx.stroke();
+      cx.globalAlpha = 1;
+    } else if (i === L('cof')) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + .5, w - 1, h - 1); cx.setLineDash([]); }
+  }
+  // ghoul archivists standing among the coffins
+  for (let i = 0; i < 6; i++) {
+    const x = 75 + i * 42, y = 150;
+    if (i < L('ghl')) {
+      const a = pop('ghl' + i, true), sw = Math.sin(T / 900 + i) * 1.5;
+      cx.save(); cx.globalAlpha = a; cx.translate(x + sw, 0);
+      cx.fillStyle = '#121216'; cx.beginPath(); cx.moveTo(-7, y); cx.lineTo(7, y); cx.lineTo(0, y - 20); cx.closePath(); cx.fill();
+      cx.fillStyle = Math.sin(T / 1700 + i * 3) > 0.96 ? '#121216' : COL.red; cx.fillRect(-3, y - 11, 2, 2); cx.fillRect(1, y - 11, 2, 2);
+      cx.fillStyle = COL.amb; cx.globalAlpha = a * 0.9; cx.fillRect(9 + Math.sin(T / 500 + i) * 1.5, y - 6, 2, 3);
+      cx.restore();
+    } else if (i === L('ghl')) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.moveTo(x - 7, y); cx.lineTo(x + 7, y); cx.lineTo(x, y - 20); cx.closePath(); cx.stroke(); cx.setLineDash([]); }
+  }
+  ring(COL.amb, 20, 70);
+}
+
+// ---- THE ALTAR: candles, chalice, standing stones, scrying orb ----
+function altarView() {
+  const L = id => S.rig[id] || 0;
+  box(6, 14, 348, 176, 1, { label: 'THE ALTAR · RITE', val: '+' + (1.5 * L('can')).toFixed(1) + '%', stroke: STONE, fill: '#09090b' });
+  // ground circle in perspective
+  cx.save(); cx.translate(180, 160); cx.scale(1, 0.26); cx.strokeStyle = COL.red; cx.globalAlpha = 0.35; cx.lineWidth = 1.5;
+  cx.beginPath(); cx.arc(0, 0, 118, 0, 6.283); cx.stroke(); cx.rotate(T / 9000); cx.beginPath();
+  for (let i = 0; i < 5; i++) { const t = i * 2.5133 - 1.5708; cx.lineTo(Math.cos(t) * 118, Math.sin(t) * 118); } cx.closePath(); cx.stroke(); cx.restore(); cx.globalAlpha = 1;
+  // altar block
+  cx.fillStyle = '#17140f'; cx.strokeStyle = GOLDD; cx.fillRect(138, 126, 84, 16); cx.strokeRect(138.5, 126.5, 83, 15);
+  cx.fillRect(150, 142, 60, 22); cx.strokeRect(150.5, 142.5, 59, 21);
+  cx.strokeStyle = COL.red; cx.globalAlpha = 0.5; cx.beginPath(); cx.moveTo(168, 150); cx.lineTo(192, 150); cx.moveTo(180, 146); cx.lineTo(180, 160); cx.stroke(); cx.globalAlpha = 1;
+  // chalice: fills with blood per level
+  const bl = L('bsn') / 8;
+  cx.strokeStyle = '#bdb8ad'; cx.fillStyle = '#0f0f12';
+  cx.beginPath(); cx.moveTo(171, 108); cx.lineTo(189, 108); cx.quadraticCurveTo(188, 121, 180, 122); cx.quadraticCurveTo(172, 121, 171, 108); cx.fill(); cx.stroke();
+  cx.fillRect(179, 122, 2, 4); cx.fillRect(175, 125, 10, 1.5);
+  if (bl > 0) { const a = pop('bsn', true); cx.fillStyle = '#8a2a2a'; cx.globalAlpha = a; cx.fillRect(172, 118 - 8 * bl, 16, 8 * bl + 0.5); cx.globalAlpha = 1; }
+  else ghostRing(180, 112, 8);
+  // black candles on an arc
+  for (let i = 0; i < 12; i++) {
+    const th = Math.PI + 0.3 + i * (Math.PI - 0.6) / 11, x = 180 + 134 * Math.cos(th), y = 152 + 82 * Math.sin(th);
+    if (i < L('can')) {
+      const a = pop('can' + i, true); cx.globalAlpha = a;
+      cx.fillStyle = '#d8d2c4'; cx.fillRect(x - 1.5, y, 3, 9);
+      const f = 1 + Math.sin(T / 90 + i * 5) * 0.2; cx.fillStyle = '#f0a83a'; cx.beginPath(); cx.moveTo(x, y - 6 * f); cx.quadraticCurveTo(x + 3, y - 1, x, y + 1); cx.quadraticCurveTo(x - 3, y - 1, x, y - 6 * f); cx.fill();
+      cx.fillStyle = '#fff1bf'; cx.fillRect(x - 0.5, y - 2, 1, 2);
+      cx.globalAlpha = a * 0.12; cx.fillStyle = '#f0a83a'; cx.beginPath(); cx.arc(x, y - 2, 9, 0, 6.283); cx.fill(); cx.globalAlpha = 1;
+    } else { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x - 1.5, y + .5, 3, 8); cx.setLineDash([]); if (i > L('can')) { cx.fillStyle = '#09090b'; cx.globalAlpha = 0.65; cx.fillRect(x - 3, y - 1, 6, 12); cx.globalAlpha = 1; } }
+  }
+  // standing stones: three each side
+  const xs = [24, 46, 68, 292, 314, 336];
+  for (let i = 0; i < 6; i++) {
+    const x = xs[i], base = 170, h = 34 + (i % 3) * 5;
+    if (i < L('sig')) {
+      const a = pop('sig' + i, true); cx.globalAlpha = a;
+      cx.fillStyle = '#16161a'; cx.strokeStyle = STONE; cx.beginPath(); cx.moveTo(x - 7, base); cx.lineTo(x - 5, base - h); cx.lineTo(x + 3, base - h - 4); cx.lineTo(x + 7, base); cx.closePath(); cx.fill(); cx.stroke();
+      cx.strokeStyle = COL.amb; cx.globalAlpha = a * (0.5 + 0.4 * Math.sin(T / 700 + i)); cx.beginPath(); cx.moveTo(x, base - h + 6); cx.lineTo(x, base - h + 16); cx.moveTo(x - 3, base - h + 11); cx.lineTo(x + 3, base - h + 11); cx.moveTo(x - 2, base - h + 22); cx.lineTo(x + 2, base - h + 26); cx.stroke();
+      cx.globalAlpha = 1;
+    } else if (i === L('sig')) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.moveTo(x - 7, base); cx.lineTo(x - 5, base - h); cx.lineTo(x + 3, base - h - 4); cx.lineTo(x + 7, base); cx.closePath(); cx.stroke(); cx.setLineDash([]); }
+  }
+  // scrying orb above the altar
+  const ol = L('orb');
+  if (ol > 0) {
+    const a = pop('orb', true), r = 6 + ol * 3, y = 56 + Math.sin(T / 900) * 2;
+    cx.save(); cx.globalAlpha = a; cx.translate(180, y);
+    cx.fillStyle = '#120d14'; cx.strokeStyle = hot; cx.beginPath(); cx.arc(0, 0, r, 0, 6.283); cx.fill(); cx.stroke();
+    cx.fillStyle = hot; for (let k = 0; k < 3; k++) { const t = T / 600 + k * 2.09; cx.globalAlpha = a * 0.8; cx.fillRect(Math.cos(t) * r * 0.55 - 1, Math.sin(t) * r * 0.55 - 1, 2, 2); }
+    cx.restore();
+  } else ghostRing(180, 56, 9);
+  ring(COL.red, 20, 70);
+}
+
+// ---- THE ABYSS: portal, eyes, tentacles, tide ----
+function abyssView() {
+  const L = id => S.rig[id] || 0;
+  box(6, 14, 348, 176, 1, { label: 'THE ABYSS · MAW', val: '×' + Math.pow(1.12, L('prt')).toFixed(2), stroke: '#2f2430', fill: '#060507' });
+  const g = cx.createRadialGradient(180, 92, 4, 180, 92, 120); g.addColorStop(0, '#2a0f16'); g.addColorStop(1, '#060507');
+  cx.fillStyle = g; cx.fillRect(7, 15, 346, 174);
+  // portal core and rings
+  cx.save(); cx.translate(180, 92);
+  cx.fillStyle = '#000'; cx.beginPath(); cx.arc(0, 0, 22, 0, 6.283); cx.fill(); cx.strokeStyle = '#5a2a2a'; cx.stroke();
+  const pl = L('prt');
+  for (let k = 0; k < 3; k++) {
+    const r = 32 + k * 14;
+    if (k < pl) { cx.save(); cx.globalAlpha = pop('prt' + k, true); cx.rotate(T / (4000 + k * 1500) * (k % 2 ? -1 : 1)); cx.strokeStyle = k === 2 ? COL.amb : '#b08d57'; cx.setLineDash([8, 4]); cx.beginPath(); cx.arc(0, 0, r, 0, 6.283); cx.stroke(); cx.setLineDash([]); cx.restore(); }
+    else if (k === pl) { cx.setLineDash([2, 4]); cx.strokeStyle = COL.line; cx.beginPath(); cx.arc(0, 0, r, 0, 6.283); cx.stroke(); cx.setLineDash([]); }
+  }
+  const blink = Math.sin(T / 3000) > 0.985 ? 0.15 : 1;
+  cx.strokeStyle = COL.red; cx.beginPath(); cx.moveTo(-16, 0); cx.quadraticCurveTo(0, -10 * blink, 16, 0); cx.quadraticCurveTo(0, 10 * blink, -16, 0); cx.stroke();
+  cx.fillStyle = COL.red; cx.fillRect(-1 + Math.sin(T / 1300) * 4, -5 * blink, 2.5, 10 * blink);
+  cx.restore();
+  // floating eyes around
+  const EP = [[44, 52], [316, 56], [70, 112], [292, 108], [112, 40], [250, 38], [40, 96], [322, 100]];
+  for (let i = 0; i < 8; i++) {
+    const [ex, ey0] = EP[i], ey = ey0 + Math.sin(T / 1000 + i) * 3;
+    if (i < L('eyr')) {
+      const a = pop('eyr' + i, true), bl = Math.sin(T / 2600 + i * 4) > 0.97 ? 0.2 : 1;
+      cx.save(); cx.globalAlpha = a; cx.translate(ex, ey); cx.strokeStyle = '#b08d57';
+      cx.beginPath(); cx.moveTo(-7, 0); cx.quadraticCurveTo(0, -5 * bl, 7, 0); cx.quadraticCurveTo(0, 5 * bl, -7, 0); cx.stroke();
+      cx.fillStyle = COL.red; cx.beginPath(); cx.arc(Math.sin(T / 1200 + i) * 1.5, 0, 1.8 * bl, 0, 6.283); cx.fill(); cx.restore();
+    } else if (i === L('eyr')) { cx.globalAlpha = 0.9; ghostRing(ex, ey, 5); cx.globalAlpha = 1; }
+  }
+  // tentacles rising from the bottom
+  for (let i = 0; i < 12; i++) {
+    const bx = 24 + i * 28, h = 40 + ((i * 17) % 26);
+    if (i < L('tnt')) {
+      const a = pop('tnt' + i, true); cx.globalAlpha = a; cx.strokeStyle = '#5a2e2e'; cx.lineCap = 'round';
+      cx.lineWidth = 3.2; cx.beginPath();
+      for (let k = 0; k <= 12; k++) { const t = k / 12, x = bx + Math.sin(T / 700 + i * 1.3 + t * 4) * 9 * t, y = 188 - t * h * a; if (k === 0) cx.moveTo(x, y); else cx.lineTo(x, y); }
+      cx.stroke(); cx.lineWidth = 1; cx.lineCap = 'butt';
+      cx.fillStyle = '#b08d57'; cx.globalAlpha = a * 0.6;
+      for (let k = 2; k < 10; k += 3) { const t = k / 12, x = bx + Math.sin(T / 700 + i * 1.3 + t * 4) * 9 * t; cx.fillRect(x - 0.5, 188 - t * h * a, 1.5, 1.5); }
+      cx.globalAlpha = 1;
+    } else if (i === L('tnt')) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.beginPath(); cx.ellipse(bx, 186, 5, 2, 0, 0, 6.283); cx.stroke(); cx.setLineDash([]); }
+  }
+  // tide of whispers
+  const tl = L('tid');
+  if (tl > 0) for (let k = 0; k < 1 + Math.floor(tl / 2); k++) {
+    cx.strokeStyle = '#b08d57'; cx.globalAlpha = 0.22; cx.beginPath();
+    for (let x = 10; x <= 350; x += 6) { const y = 176 - k * 4 + Math.sin(x / 18 + T / 500 + k) * 2; if (x === 10) cx.moveTo(x, y); else cx.lineTo(x, y); }
+    cx.stroke(); cx.globalAlpha = 1;
+  }
+  ring(COL.red, 20, 70);
+}
+
 function draw(St, ts, view) {
   if (!cv || !cx) return;
   S = St; T = ts;
@@ -273,7 +439,7 @@ function draw(St, ts, view) {
   cx.textBaseline = 'top';
   if (view !== 'rack' && view !== 'board') {} 
   embers();
-  if (view === 'board') boardView(); else if (view === 'rack') rackView(); else chipView();
+  if (view === 'board') boardView(); else if (view === 'rack') rackView(); else if (view === 'crypt') cryptView(); else if (view === 'altar') altarView(); else if (view === 'abyss') abyssView(); else chipView();
   cx.restore();
 }
 root.SCENE = { init, draw, views, pulse };

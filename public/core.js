@@ -22,7 +22,7 @@ const GENS = [
   { id: 'fab',  n: 'Cathedral Fab', b: 3e15,   r: 1.18, p: 1.03e13,  u: 6, d: 'Light is the only chisel here.' }
 ];
 const NODES = ['180nm', '130nm', '90nm', '65nm', '45nm', '32nm', '22nm', '14nm', '10nm', '7nm', '5nm', '3nm', '2nm'];
-const REQ = [130, 1820, 25480, 356720, 4994080, 69917120, 978839680, 13703755520, 191852577280, 2685936081920, 37603105146880, 526443472056320]; // lifetime µ to shrink from node i
+const REQ = [130, 1950, 29250, 438750, 6581250, 98718750, 1480781250, 22211718750, 333175781250, 4997636718750, 74964550781250, 1124468261718750]; // lifetime µ to shrink from node i
 const NODE_MULT = 2.5;
 const MUK = 2e8, MUP = 0.33;
 const ASC_MU = 3e7, ASC_DIV = 1e7; // ascension threshold / divisor
@@ -158,7 +158,38 @@ RIG.push(
   { id: 'hrn', cat: 'occ', n: 'Summoning circle', tag: 'SUM', costs: [2e7, 4e9, 8e11], unl: S => S.node >= 2,
     val: L => L, f: v => '+' + v + (v === 1 ? ' thread' : ' threads'), note: 'Another mind answers the call' }
 );
-const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1 };
+// ---- the Domain: three dark sites that grow visible attachments as you upgrade them ----
+const siteCrypt = S => S.node >= 2, siteAltar = S => S.node >= 4, siteAbyss = S => S.node >= 6;
+RIG.push(
+  // The Crypt: coffins of data, bone, ravens and ghoul archivists
+  { id: 'cof', cat: 'crp', n: 'Sarcophagi', tag: 'COF', b: 1200, r: 1.6, cap: 8, unl: siteCrypt,
+    val: L => 7 * L, f: v => '+' + v + '% data', note: 'Each coffin hoards more data' },
+  { id: 'bon', cat: 'crp', n: 'Bone lattice', tag: 'BON', b: 1500, r: 1.6, cap: 6, unl: siteCrypt,
+    val: L => 0.9 * L, f: v => '+' + v.toFixed(1) + '/s cooling', note: 'Ribs carry the heat away' },
+  { id: 'rat', cat: 'crp', n: 'Ravens', tag: 'RAV', b: 1400, r: 1.6, cap: 8, unl: siteCrypt,
+    val: L => 4 * L, f: v => '+' + v + '% omen rate', note: 'They fetch interrupts and omens' },
+  { id: 'ghl', cat: 'crp', n: 'Ghoul archivists', tag: 'GHL', b: 1800, r: 1.65, cap: 6, unl: siteCrypt,
+    val: L => 3 * L, f: v => '+' + v + '% rite speed', note: 'Incantations finish faster' },
+  // The Altar: candles, a chalice of blood, standing stones and a scrying orb
+  { id: 'can', cat: 'alt', n: 'Black candles', tag: 'CAN', b: 6000, r: 1.6, cap: 12, unl: siteAltar,
+    val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Each flame feeds the chip' },
+  { id: 'bsn', cat: 'alt', n: 'Blood chalice', tag: 'BLO', b: 7000, r: 1.65, cap: 8, unl: siteAltar,
+    val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% microcode', note: 'Reboots pay more microcode' },
+  { id: 'sig', cat: 'alt', n: 'Standing stones', tag: 'STN', b: 6500, r: 1.7, cap: 6, unl: siteAltar,
+    val: L => 3 * L, f: v => '+' + v + '° ceiling', note: 'Overclock hotter, longer' },
+  { id: 'orb', cat: 'alt', n: 'Scrying orb', tag: 'ORB', costs: [8e4, 8e6, 8e8], unl: siteAltar,
+    val: L => 10 * L, f: v => '+' + v + '% pacts', note: 'Patrons pay more for foresight' },
+  // The Abyss: tentacles, eyes, a portal and the tide
+  { id: 'tnt', cat: 'aby', n: 'Tentacles', tag: 'TNT', b: 30000, r: 1.6, cap: 12, unl: siteAbyss,
+    val: L => 2 * L, f: v => '+' + v + '% cycles', note: 'Something reaches up from below' },
+  { id: 'eyr', cat: 'aby', n: 'Floating eyes', tag: 'EYE', b: 32000, r: 1.65, cap: 8, unl: siteAbyss,
+    val: L => 8 * L, f: v => '+' + v + '% interrupt pay', note: 'They see every opening' },
+  { id: 'prt', cat: 'aby', n: 'Void portal', tag: 'VOI', costs: [3e5, 3e7, 3e9], unl: siteAbyss,
+    val: L => Math.pow(1.12, L), f: v => '×' + v.toFixed(2), note: 'Each ring opens a wider door' },
+  { id: 'tid', cat: 'aby', n: 'Tide of whispers', tag: 'TID', b: 36000, r: 1.7, cap: 10, unl: siteAbyss,
+    val: L => L, f: v => '−' + v + '% unit cost', note: 'The voices haggle on your behalf' }
+);
+const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1, can: 1, tnt: 1, prt: 1 };
 const RIGM = {}; RIG.forEach(u => { RIGM[u.id] = u; });
 
 // ---------- clients / contracts ----------
@@ -339,6 +370,9 @@ function recalc(S) {
   M.dm *= 1 + 0.06 * L('sol');
   M.off += 0.5 * L('cry');
   M.thr += L('hrn');
+  M.dm *= 1 + 0.07 * L('cof'); M.cool += 0.9 * L('bon'); M.irqR *= 1 + 0.04 * L('rat'); M.ps *= 1 + 0.03 * L('ghl');
+  M.gA += 0.015 * L('can'); M.muG *= 1 + 0.015 * L('bsn'); M.oc += 0.03 * L('sig'); M.hcap += 3 * L('sig'); M.ctRew *= 1 + 0.1 * L('orb');
+  M.gA += 0.02 * L('tnt'); M.irqP *= 1 + 0.08 * L('eyr'); M.gB *= Math.pow(1.12, L('prt')); M.cost *= 1 - 0.01 * L('tid');
   M.oc += 0.03 * L('vrm');
   M.oc *= M.ocX;
   M.heatX *= 1 + 0.025 * L('clk');
@@ -409,7 +443,7 @@ function heatPct(S) { return Math.min(100, S.heat / S._M.hcap * 100); }
 // ---------- rig upgrades ----------
 const rigLv = (S, id) => S.rig[id] || 0;
 const rigTotal = S => { let n = 0; for (const k in S.rig) n += S.rig[k]; return n; };
-function rigCap(S, u) { return u.costs ? u.costs.length : 8 + 4 * S.node; }
+function rigCap(S, u) { return u.costs ? u.costs.length : (u.cap || 8 + 4 * S.node); }
 function rigCost(S, u, L) { return u.costs ? u.costs[L] * costScale(S) : u.b * Math.pow(u.r, L) * costScale(S); }
 function rigVal(S, u, L) { return u.val(L, S); }
 function rigDelta(S, id) {
@@ -808,6 +842,8 @@ const HELP = [
     b: 'Every cleared pact board slides a sled into the rack. FORGE, Rack upgrades make each sled stronger, add bays for more sleds, cool the chip and speed up pacts.' },
   { id: 'occult', t: 'The Occult', u: S => S.node >= 1 || S.st.reb >= 2,
     b: 'Forbidden parts in FORGE, Occult: runic etching, a watching eye, a gargoyle heatsink, blood conduits, soul jars, a crypt cache and a summoning circle that adds threads. More of them open as you reboot and shrink the die.' },
+  { id: 'domain', t: 'The Domain', u: S => S.node >= 2,
+    b: 'Beyond the chip lie three dark sites: the Crypt (die 90nm), the Altar (45nm) and the Abyss (22nm). Each one has its own view in the schematic, and every upgrade you buy in DOMAIN visibly attaches to it: coffins, ravens and ghouls; candles, a chalice and standing stones; tentacles, eyes and a void portal. Each site boosts something different, so none replaces the others.' },
   { id: 'omen', t: 'Omens', u: S => S.un.pr,
     b: 'Now and then a voice offers a choice instead of a plain reward. Take the gift for a burst of cycles at the cost of heat, strike a bargain to double output for a short time at the cost of a quarter of your cycles, or refuse and keep a little data. The Daemon of Mirrors refuses for you.' },
   { id: 'asc', t: 'Ascension', u: S => S.un.asc,

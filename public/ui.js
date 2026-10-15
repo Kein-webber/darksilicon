@@ -70,28 +70,32 @@ const TABS = [
   { id: 'work', n: 'RITES', ok: () => S.un.pr || S.un.ct },
   { id: 'lab', n: 'GRIMOIRE', ok: () => S.un.pr },
   { id: 'rebirth', n: 'REBIRTH', ok: () => S.un.rb },
+  { id: 'dom', n: 'DOMAIN', ok: () => S.node >= 2 },
   { id: 'more', n: 'CODEX', ok: () => true }
 ];
 const SUBS = {
   rig: [['units', 'Units', () => true], ['cmp', 'Compute', () => S.un.cmp], ['th', 'Thermal', () => S.un.oc], ['ing', 'Ingress', () => S.un.ct], ['pw', 'Power', () => S.un.pw], ['rk', 'Rack', () => S.sled > 0 || S.st.boards > 0], ['occ', 'Occult', () => S.node >= 1 || S.st.reb >= 2]],
   work: [['procs', 'Incantations', () => S.un.pr], ['cl', 'Pacts', () => S.un.ct]],
   lab: [],
+  dom: [['crp', 'The Crypt', () => S.node >= 2], ['alt', 'The Altar', () => S.node >= 4], ['aby', 'The Abyss', () => S.node >= 6]],
   rebirth: [['reboot', 'Reboot', () => S.un.rb], ['shop', 'Shop', () => S.un.rb], ['dm', 'Daemons', () => S.un.dm], ['shr', 'Shrink', () => S.un.rb], ['asc', 'Ascend', () => S.un.asc]],
   more: [['stats', 'Stats', () => true], ['guide', 'Guide', () => true], ['seals', 'Seals', () => true], ['log', 'Chronicle', () => true], ['set', 'Settings', () => true]]
 };
-let curTab = 'rig', curSub = { rig: 'units', work: 'procs', lab: '', rebirth: 'reboot', more: 'stats' };
+let curTab = 'rig', curSub = { rig: 'units', work: 'procs', lab: '', rebirth: 'reboot', dom: 'crp', more: 'stats' };
 const seenT = {}, seenS = {};
 let view = null, navSig = '', subSig = '';
 const main = $('#main'), nav = $('#nav'), subsEl = $('#subs');
 function subsFor(t) { return SUBS[t].filter(s => s[2]()); }
+const SITEVIEW = { crp: 'crypt', alt: 'altar', aby: 'abyss', rk: 'rack' };
+function syncView() { const v = SITEVIEW[curSub[curTab]]; if (v && (curTab === 'dom' || curTab === 'rig') && SCENE.views(S).indexOf(v) >= 0) { sceneView = v; renderViews(); } }
 function setTab(id) {
   curTab = id; seenT[id] = 1;
   const vs = subsFor(id);
   if (vs.length && !vs.find(s => s[0] === curSub[id])) curSub[id] = vs[0][0];
   if (vs.length) seenS[id + '.' + curSub[id]] = 1;
-  rebuild(true); renderNav();
+  rebuild(true); renderNav(); syncView();
 }
-function setSub(id) { curSub[curTab] = id; seenS[curTab + '.' + id] = 1; rebuild(true); renderNav(); }
+function setSub(id) { curSub[curTab] = id; seenS[curTab + '.' + id] = 1; rebuild(true); renderNav(); syncView(); }
 function renderNav() {
   const vis = TABS.filter(t => t.ok());
   const subs = subsFor(curTab);
@@ -111,6 +115,7 @@ function viewFor(t, s) {
   if (t === 'rig') return s === 'units' ? vUnits() : vRig(s);
   if (t === 'work') return s === 'cl' ? vClients() : vProcs();
   if (t === 'lab') return vLab();
+  if (t === 'dom') return vRig(s);
   if (t === 'rebirth') return { reboot: vReboot, shop: vShop, dm: vDaemons, shr: vShrink, asc: vAscend }[s]();
   return { stats: vStats, guide: vGuide, seals: vSeals, log: vLog, set: vSettings }[s]();
 }
@@ -188,9 +193,9 @@ function vRig(cat) {
   return {
     sig: () => items.map(u => u.unl(S) ? 1 : 0).join() + C.NODES[S.node],
     build(r) {
-      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'Rack', occ: 'The Occult' };
+      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'The Rack', occ: 'The Occult', crp: 'The Crypt', alt: 'The Altar', aby: 'The Abyss' };
       r.append(h('h2', '', titles[cat]));
-      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.' };
+      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.', crp: 'A vault beneath the chip. Every upgrade attaches to the view: coffins of data, bone ribs, ravens, ghouls.', alt: 'A rite of fire and blood. Candles, a chalice, standing stones and a scrying orb appear as you buy them.', aby: 'Something old looks back. Tentacles, floating eyes, a void portal and a tide of whispers.' };
       r.append(h('div', 'note', hints[cat]));
       const g = h('div', 'grid'); r.append(g);
       items.forEach(u => {
@@ -583,6 +588,9 @@ const COACH = [
   ['shr', () => S.node >= 1, 'Finer stone', 'The die is smaller. Units from higher tiers unlock per node, rig caps rise by 4, and the cost of future upgrades climbs with your power.'],
   ['rk', () => S.sled > 0 || S.st.boards > 0, 'The rack is yours', 'Your first sled slid into the rack. FORGE now has a Rack tab: richer sleds, more bays, cold aisles and faster pacts.'],
   ['occ', () => S.node >= 1 || S.st.reb >= 2, 'The Occult', 'The old stone whispers. FORGE now has an Occult tab with forbidden parts: runic etching, a watching eye, a gargoyle heatsink, and more that wake as you reboot and shrink the die.'],
+  ['crp', () => S.node >= 2, 'The Crypt', 'A vault opened beneath the chip. DOMAIN, The Crypt: every upgrade you buy attaches to the CRYPT view: coffins of data, bone ribs, ravens and ghouls.'],
+  ['alt', () => S.node >= 4, 'The Altar', 'An altar rose from the stone. DOMAIN, The Altar: candles, a blood chalice, standing stones and a scrying orb. More cycles, more microcode.'],
+  ['aby', () => S.node >= 6, 'The Abyss', 'The floor gave way. DOMAIN, The Abyss: tentacles, floating eyes, a void portal and the tide of whispers. Something looks back.'],
   ['asc', () => S.un.asc, 'Ascension', 'You are close to the third reset. REBIRTH, Ascend turns lifetime microcode into qubits: permanent multipliers and perks that let you restart further along.']
 ];
 function coachCheck() {
@@ -677,6 +685,7 @@ function init() {
     if (got > 0) setTimeout(() => toast('Away ' + fmtTime(away) + ' · +' + F(S.c - c0) + ' cycles'), 600);
   }
   C.slow(S);
+  knownViews = SCENE.views(S).length;
   setTab('rig');
   let last = performance.now(), lastSave = 0, lastUi = 0;
   function frame(ts) {
