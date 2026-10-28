@@ -5,13 +5,14 @@
 //  DARK SILICON — core logic (no DOM). Used by ui.js, scene.js and the balance sim.
 // =====================================================================
 
+const r1 = v => +v.toFixed(1);
 // ---------- static data ----------
 const MS = [25, 50, 100, 200, 300, 400, 500, 600, 800, 1000]; // each milestone: x2 to that tier
 const GENS = [
-  { id: 'tr',   n: 'Transistor',    b: 12,     r: 1.13, p: 0.25,     u: 0, d: 'Sand that learned to say yes or no.' },
-  { id: 'lg',   n: 'Logic Gate',    b: 160,    r: 1.14, p: 2.5,      u: 0, d: 'Three can argue. Two can agree.' },
-  { id: 'alu',  n: 'ALU',           b: 1.5e3,  r: 1.14, p: 27,       u: 0, d: 'It counts, and does not tire.' },
-  { id: 'reg',  n: 'Register',      b: 2e4,    r: 1.14, p: 308,      u: 0, d: 'A pocket for the thing being thought.' },
+  { id: 'tr',   n: 'Transistor',    b: 9,      r: 1.13, p: 0.35,     u: 0, d: 'Sand that learned to say yes or no.' },
+  { id: 'lg',   n: 'Logic Gate',    b: 120,    r: 1.14, p: 3.2,      u: 0, d: 'Three can argue. Two can agree.' },
+  { id: 'alu',  n: 'ALU',           b: 1.1e3,  r: 1.14, p: 27,       u: 0, d: 'It counts, and does not tire.' },
+  { id: 'reg',  n: 'Register',      b: 1.5e4,  r: 1.14, p: 308,      u: 0, d: 'A pocket for the thing being thought.' },
   { id: 'l1',   n: 'L1 Cache',      b: 3e5,    r: 1.15, p: 3750,     u: 0, d: 'Memory kept close to the heart.' },
   { id: 'l2',   n: 'L2 Cache',      b: 5e6,    r: 1.15, p: 52600,    u: 0, d: 'Larger. Slower. Still faithful.' },
   { id: 'core', n: 'Core',          b: 9e7,    r: 1.16, p: 780000,   u: 0, d: 'A second mind behind the same eyes.' },
@@ -37,22 +38,22 @@ const PROCS = [
 ];
 
 const RES = [
-  { id: 'a1', b: 'Logic',     n: 'Boolean Algebra', d: '+25% cycles',                      c: 10,   fx: M => { M.g *= 1.25; } },
-  { id: 'a2', b: 'Logic',     n: 'Superscalar',     d: '×1.5 cycles',                      c: 60,   fx: M => { M.g *= 1.5; } },
-  { id: 'a3', b: 'Logic',     n: 'Out-of-Order',    d: '×2 cycles',                        c: 400,  fx: M => { M.g *= 2; } },
+  { id: 'a1', b: 'Logic',     n: 'Boolean Algebra', d: '+25% cycles',                      c: 7,    fx: M => { M.g *= 1.25; } },
+  { id: 'a2', b: 'Logic',     n: 'Superscalar',     d: '×1.5 cycles',                      c: 42,   fx: M => { M.g *= 1.5; } },
+  { id: 'a3', b: 'Logic',     n: 'Out-of-Order',    d: '×2 cycles',                        c: 280,  fx: M => { M.g *= 2; } },
   { id: 'a4', b: 'Logic',     n: 'Speculation',     d: '×2.5 cycles',                      c: 3e3,  fx: M => { M.g *= 2.5; } },
   { id: 'a5', b: 'Logic',     n: 'Lithic Sigil',    d: '×3 cycles',                        c: 25e3, fx: M => { M.g *= 3; } },
-  { id: 'b1', b: 'Thermal',   n: 'Heatsink',        d: '+1.5 cooling/s',                   c: 15,   fx: M => { M.cool += 1.5; } },
+  { id: 'b1', b: 'Thermal',   n: 'Heatsink',        d: '+1.5 cooling/s',                   c: 10,   fx: M => { M.cool += 1.5; } },
   { id: 'b2', b: 'Thermal',   n: 'Thermal Paste',   d: '+2 cooling/s',                     c: 90,   fx: M => { M.cool += 2; } },
   { id: 'b3', b: 'Thermal',   n: 'Voltage Curve',   d: 'Overclock +0.25×',                 c: 500,  fx: M => { M.oc += 0.25; } },
   { id: 'b4', b: 'Thermal',   n: 'Liquid Loop',     d: '+4 cooling/s',                     c: 4e3,  fx: M => { M.cool += 4; } },
   { id: 'b5', b: 'Thermal',   n: 'Cryo Altar',      d: '+8 cooling/s, overclock +0.5×',    c: 3e4,  fx: M => { M.cool += 8; M.oc += 0.5; } },
-  { id: 'c1', b: 'Memory',    n: 'Prefetcher',      d: 'Ticks add +2% of cycles/s',        c: 12,   fx: M => { M.tapP += 0.02; } },
+  { id: 'c1', b: 'Memory',    n: 'Prefetcher',      d: 'Ticks add +2% of cycles/s',        c: 8,    fx: M => { M.tapP += 0.02; } },
   { id: 'c2', b: 'Memory',    n: 'L1 Tuning',       d: 'Register & L1 ×2',                 c: 70,   fx: M => { M.gen[3] *= 2; M.gen[4] *= 2; } },
   { id: 'c3', b: 'Memory',    n: 'TLB',             d: 'Ticks add +3% more',               c: 450,  fx: M => { M.tapP += 0.03; } },
   { id: 'c4', b: 'Memory',    n: 'Victim Cache',    d: 'L2 & Core ×2',                     c: 3500, fx: M => { M.gen[5] *= 2; M.gen[6] *= 2; } },
   { id: 'c5', b: 'Memory',    n: 'Memory Wall',     d: 'Generators cost −10%',             c: 28e3, fx: M => { M.cost *= 0.9; } },
-  { id: 'd1', b: 'Scheduler', n: 'Context Switch',  d: '+1 thread',                        c: 20,   fx: M => { M.thr += 1; } },
+  { id: 'd1', b: 'Scheduler', n: 'Context Switch',  d: '+1 thread',                        c: 14,   fx: M => { M.thr += 1; } },
   { id: 'd2', b: 'Scheduler', n: 'Priority Queue',  d: 'Tasks run 25% faster',             c: 120,  fx: M => { M.ps *= 1.25; } },
   { id: 'd3', b: 'Scheduler', n: 'SMT',             d: '+1 thread',                        c: 800,  fx: M => { M.thr += 1; } },
   { id: 'd4', b: 'Scheduler', n: 'NUMA',            d: 'Tasks yield ×2 data',              c: 5e3,  fx: M => { M.dm *= 2; } },
@@ -109,9 +110,9 @@ const DAEMONS = [
 
 // ---------- rig upgrades (levels persist through reboot and shrink, reset on ascension) ----------
 const RIG = [
-  { id: 'clk', cat: 'cmp', n: 'Clock',        tag: 'CLK', b: 60,  r: 1.55, unl: S => S.un.cmp,
+  { id: 'clk', cat: 'cmp', n: 'Clock',        tag: 'CLK', b: 45,  r: 1.55, unl: S => S.un.cmp,
     val: L => 1 + 0.15 * L, f: v => v.toFixed(2) + ' GHz', note: '+3% cycles, runs hotter' },
-  { id: 'cor', cat: 'cmp', n: 'Cores',        tag: 'COR', b: 140, r: 1.6,  unl: S => S.un.cmp && S.tot >= 2000,
+  { id: 'cor', cat: 'cmp', n: 'Cores',        tag: 'COR', b: 105, r: 1.6,  unl: S => S.un.cmp && S.tot >= 2000,
     val: L => 2 + L, f: v => v + ' cores', note: '+2.5% cycles per core' },
   { id: 'clu', cat: 'cmp', n: 'Clusters',     tag: 'CLU', costs: [4e5, 6e7, 8e9], unl: S => S.tot >= 2e5,
     val: L => 1 + L, f: v => v + (v === 1 ? ' cluster' : ' clusters'), note: '×1.2 cycles each' },
@@ -124,11 +125,11 @@ const RIG = [
   { id: 'nic', cat: 'ing', n: 'NIC',          tag: 'NIC', b: 200, r: 1.5,  unl: S => S.un.ct,
     val: (L, S) => refRate(S) * (1 + 0.04 * L), f: v => fmt(v) + ' req/s', note: 'Patrons send work faster' },
   { id: 'bal', cat: 'ing', n: 'Load balancer', tag: 'BAL', b: 500, r: 1.6, unl: S => S.un.ct,
-    val: L => 4 * L, f: v => '+' + v + '%', note: 'Contracts pay +4% each' },
+    val: L => 4 * L, f: v => '+' + r1(v) + '%', note: 'Contracts pay +4% each' },
   { id: 'edg', cat: 'ing', n: 'Edge cache',   tag: 'EDG', b: 300, r: 1.55, unl: S => S.un.ct,
-    val: L => 8 * L, f: v => '+' + v + '%', note: 'Interrupts pay more, come sooner' },
+    val: L => 8 * L, f: v => '+' + r1(v) + '%', note: 'Interrupts pay more, come sooner' },
   { id: 'psu', cat: 'pw',  n: 'PSU',          tag: 'PSU', b: 150, r: 1.55, unl: S => S.un.pw,
-    val: L => 1.5 * L, f: v => '+' + v + '%', note: '+1.5% cycles per level' },
+    val: L => 1.5 * L, f: v => '+' + r1(v) + '%', note: '+1.5% cycles per level' },
   { id: 'vrm', cat: 'pw',  n: 'VRM phases',   tag: 'VRM', b: 600, r: 1.6,  unl: S => S.un.pw && S.un.oc,
     val: L => 1.5 + 0.03 * L, f: v => '×' + v.toFixed(2), note: 'Overclock multiplier +0.03' }
 ];
@@ -141,7 +142,7 @@ RIG.push(
   { id: 'rcl', cat: 'rk', n: 'Cold aisle', tag: 'AIS', b: 400, r: 1.6, unl: rackOk,
     val: L => 0.12 * L, f: v => '+' + v.toFixed(2) + '/s per sled', note: 'Every sled helps cool the chip' },
   { id: 'rcb', cat: 'rk', n: 'Cabling', tag: 'CAB', b: 350, r: 1.55, unl: rackOk,
-    val: L => 3 * L, f: v => '+' + v + '% pact speed', note: 'Pacts fill faster' },
+    val: L => 3 * L, f: v => '+' + r1(v) + '% pact speed', note: 'Pacts fill faster' },
   // the occult: forbidden parts, one small bargain each
   { id: 'run', cat: 'occ', n: 'Runic etching', tag: 'RUN', b: 500, r: 1.55, unl: S => S.node >= 1 || S.st.reb >= 2,
     val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Sigils cut into the die' },
@@ -150,9 +151,9 @@ RIG.push(
   { id: 'gar', cat: 'occ', n: 'Gargoyle sink', tag: 'GAR', b: 600, r: 1.6, unl: S => S.node >= 1,
     val: L => 1.4 * L, f: v => '+' + v.toFixed(1) + '/s', note: 'Stone wings drink the heat' },
   { id: 'bld', cat: 'occ', n: 'Blood conduit', tag: 'BLD', b: 700, r: 1.6, unl: S => S.st.reb >= 3,
-    val: L => 6 * L, f: v => '+' + v + '% omens', note: 'Omens come sooner and pay more' },
+    val: L => 6 * L, f: v => '+' + r1(v) + '% omens', note: 'Omens come sooner and pay more' },
   { id: 'sol', cat: 'occ', n: 'Soul jar', tag: 'SOL', b: 800, r: 1.65, unl: S => S.st.reb >= 3,
-    val: L => 6 * L, f: v => '+' + v + '% data', note: 'Incantations yield more data' },
+    val: L => 6 * L, f: v => '+' + r1(v) + '% data', note: 'Incantations yield more data' },
   { id: 'cry', cat: 'occ', n: 'Crypt cache', tag: 'CRY', b: 900, r: 1.7, unl: S => S.st.reb >= 5,
     val: L => 0.5 * L, f: v => '+' + v.toFixed(1) + ' h', note: 'The chip dreams longer while you are away' },
   { id: 'hrn', cat: 'occ', n: 'Summoning circle', tag: 'SUM', costs: [2e7, 4e9, 8e11], unl: S => S.node >= 2,
@@ -163,31 +164,31 @@ const siteCrypt = S => S.node >= 2, siteAltar = S => S.node >= 4, siteAbyss = S 
 RIG.push(
   // The Crypt: coffins of data, bone, ravens and ghoul archivists
   { id: 'cof', cat: 'crp', n: 'Sarcophagi', tag: 'COF', b: 1200, r: 1.6, cap: 8, unl: siteCrypt,
-    val: L => 7 * L, f: v => '+' + v + '% data', note: 'Each coffin hoards more data' },
+    val: L => 7 * L, f: v => '+' + r1(v) + '% data', note: 'Each coffin hoards more data' },
   { id: 'bon', cat: 'crp', n: 'Bone lattice', tag: 'BON', b: 1500, r: 1.6, cap: 6, unl: siteCrypt,
     val: L => 0.9 * L, f: v => '+' + v.toFixed(1) + '/s cooling', note: 'Ribs carry the heat away' },
   { id: 'rat', cat: 'crp', n: 'Ravens', tag: 'RAV', b: 1400, r: 1.6, cap: 8, unl: siteCrypt,
-    val: L => 4 * L, f: v => '+' + v + '% omen rate', note: 'They fetch interrupts and omens' },
+    val: L => 4 * L, f: v => '+' + r1(v) + '% omen rate', note: 'They fetch interrupts and omens' },
   { id: 'ghl', cat: 'crp', n: 'Ghoul archivists', tag: 'GHL', b: 1800, r: 1.65, cap: 6, unl: siteCrypt,
-    val: L => 3 * L, f: v => '+' + v + '% rite speed', note: 'Incantations finish faster' },
+    val: L => 3 * L, f: v => '+' + r1(v) + '% rite speed', note: 'Incantations finish faster' },
   // The Altar: candles, a chalice of blood, standing stones and a scrying orb
   { id: 'can', cat: 'alt', n: 'Black candles', tag: 'CAN', b: 6000, r: 1.6, cap: 12, unl: siteAltar,
     val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Each flame feeds the chip' },
   { id: 'bsn', cat: 'alt', n: 'Blood chalice', tag: 'BLO', b: 7000, r: 1.65, cap: 8, unl: siteAltar,
     val: L => 1.5 * L, f: v => '+' + v.toFixed(1) + '% microcode', note: 'Reboots pay more microcode' },
   { id: 'sig', cat: 'alt', n: 'Standing stones', tag: 'STN', b: 6500, r: 1.7, cap: 6, unl: siteAltar,
-    val: L => 3 * L, f: v => '+' + v + '° ceiling', note: 'Overclock hotter, longer' },
+    val: L => 3 * L, f: v => '+' + r1(v) + '° ceiling', note: 'Overclock hotter, longer' },
   { id: 'orb', cat: 'alt', n: 'Scrying orb', tag: 'ORB', costs: [8e4, 8e6, 8e8], unl: siteAltar,
-    val: L => 10 * L, f: v => '+' + v + '% pacts', note: 'Patrons pay more for foresight' },
+    val: L => 10 * L, f: v => '+' + r1(v) + '% pacts', note: 'Patrons pay more for foresight' },
   // The Abyss: tentacles, eyes, a portal and the tide
   { id: 'tnt', cat: 'aby', n: 'Tentacles', tag: 'TNT', b: 30000, r: 1.6, cap: 12, unl: siteAbyss,
-    val: L => 2 * L, f: v => '+' + v + '% cycles', note: 'Something reaches up from below' },
+    val: L => 2 * L, f: v => '+' + r1(v) + '% cycles', note: 'Something reaches up from below' },
   { id: 'eyr', cat: 'aby', n: 'Floating eyes', tag: 'EYE', b: 32000, r: 1.65, cap: 8, unl: siteAbyss,
-    val: L => 8 * L, f: v => '+' + v + '% interrupt pay', note: 'They see every opening' },
+    val: L => 8 * L, f: v => '+' + r1(v) + '% interrupt pay', note: 'They see every opening' },
   { id: 'prt', cat: 'aby', n: 'Void portal', tag: 'VOI', costs: [3e5, 3e7, 3e9], unl: siteAbyss,
     val: L => Math.pow(1.12, L), f: v => '×' + v.toFixed(2), note: 'Each ring opens a wider door' },
   { id: 'tid', cat: 'aby', n: 'Tide of whispers', tag: 'TID', b: 36000, r: 1.7, cap: 10, unl: siteAbyss,
-    val: L => L, f: v => '−' + v + '% unit cost', note: 'The voices haggle on your behalf' }
+    val: L => L, f: v => '−' + r1(v) + '% unit cost', note: 'The voices haggle on your behalf' }
 );
 // ---- the Memory bus (opens after the first reboot) and the Foundry (opens after the first die shrink) ----
 const siteMem = S => S.st.reb >= 1, siteFab = S => S.node >= 1;
@@ -201,7 +202,7 @@ RIG.push(
   { id: 'brp', cat: 'mem', n: 'Branch oracle', tag: 'ORC', b: 1000, r: 1.65, cap: 6, unl: siteMem,
     val: L => 2.5 * L, f: v => '−' + v.toFixed(1) + '% heat', note: 'It foretells the path and wastes less' },
   { id: 'ecc', cat: 'mem', n: 'Warding', tag: 'WRD', costs: [4e4, 4e6, 4e8], unl: siteMem,
-    val: L => 8 * L, f: v => '+' + v + '% data', note: 'Wards keep every bit true' },
+    val: L => 8 * L, f: v => '+' + r1(v) + '% data', note: 'Wards keep every bit true' },
   { id: 'wfr', cat: 'fab', n: 'Wafer line', tag: 'WFR', b: 2500, r: 1.6, unl: siteFab,
     val: L => 2 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Blank wafers ride the belt' },
   { id: 'lsr', cat: 'fab', n: 'Lithography beam', tag: 'LSR', b: 3000, r: 1.65, cap: 6, unl: siteFab,
@@ -209,9 +210,37 @@ RIG.push(
   { id: 'lns', cat: 'fab', n: 'Lens stack', tag: 'LNS', costs: [2e5, 2e7, 2e9, 2e11], unl: siteFab,
     val: L => 0.04 * L, f: v => '+' + v.toFixed(2) + ' overclock', note: 'Each glass focuses the fire' },
   { id: 'clr', cat: 'fab', n: 'Cleanroom wards', tag: 'CLR', b: 2800, r: 1.65, cap: 8, unl: siteFab,
-    val: L => 3 * L, f: v => '+' + v + '° ceiling', note: 'Nothing unclean touches the stone' }
+    val: L => 3 * L, f: v => '+' + r1(v) + '° ceiling', note: 'Nothing unclean touches the stone' }
 );
-const RIG_PROD = { clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1, can: 1, tnt: 1, prt: 1, ram: 1, wfr: 1 };
+// ---- late Domain: the Ossuary (14nm), the Void Foundry (10nm) and the Star Forge (7nm) ----
+const siteOss = S => S.node >= 7, siteVoid = S => S.node >= 8, siteStar = S => S.node >= 9;
+RIG.push(
+  { id: 'skl', cat: 'oss', n: 'Skull choir', tag: 'SKL', b: 1.4e5, r: 1.6, cap: 10, unl: siteOss,
+    val: L => 2.5 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'They sing one note, forever' },
+  { id: 'rel', cat: 'oss', n: 'Reliquary', tag: 'REL', b: 1.6e5, r: 1.65, cap: 8, unl: siteOss,
+    val: L => 3 * L, f: v => '+' + r1(v) + '% microcode', note: 'Saints, boiled to their last use' },
+  { id: 'gwd', cat: 'oss', n: 'Grave wind', tag: 'WND', b: 1.5e5, r: 1.6, cap: 8, unl: siteOss,
+    val: L => 1.2 * L, f: v => '+' + v.toFixed(1) + '/s cooling', note: 'A cold draught from nowhere' },
+  { id: 'lch', cat: 'oss', n: 'Lich vessel', tag: 'LCH', costs: [1.5e6, 1.5e8, 1.5e10], unl: siteOss,
+    val: L => 3 * L, f: v => '+' + r1(v) + ' h away', note: 'It dreams while you are gone' },
+  { id: 'vwf', cat: 'vfd', n: 'Null wafers', tag: 'NUL', b: 7e5, r: 1.6, cap: 10, unl: siteVoid,
+    val: L => 2.5 * L, f: v => '+' + v.toFixed(1) + '% cycles', note: 'Discs of nothing, etched with less' },
+  { id: 'evh', cat: 'vfd', n: 'Event horizon', tag: 'HOR', costs: [8e6, 8e8, 8e10], unl: siteVoid,
+    val: L => 4 * L, f: v => '+' + r1(v) + '% tick power', note: 'Your hand falls in and returns heavier' },
+  { id: 'sng', cat: 'vfd', n: 'Singularity coil', tag: 'SNG', b: 8e5, r: 1.65, cap: 8, unl: siteVoid,
+    val: L => 4 * L, f: v => '+' + r1(v) + '° ceiling', note: 'Heat has nowhere to go but in' },
+  { id: 'ent', cat: 'vfd', n: 'Entropy sink', tag: 'ENT', b: 7.5e5, r: 1.65, cap: 8, unl: siteVoid,
+    val: L => 3 * L, f: v => '+' + r1(v) + '% rite speed', note: 'Every task finishes a little early' },
+  { id: 'stc', cat: 'stf', n: 'Stellar core', tag: 'STC', b: 3.5e6, r: 1.6, cap: 12, unl: siteStar,
+    val: L => 3 * L, f: v => '+' + r1(v) + '% cycles', note: 'A captured sun, thinking' },
+  { id: 'pls', cat: 'stf', n: 'Pulsar clock', tag: 'PLS', b: 4e6, r: 1.65, cap: 8, unl: siteStar,
+    val: L => 0.05 * L, f: v => '+' + v.toFixed(2) + ' overclock', note: 'A clock that cannot be late' },
+  { id: 'anv', cat: 'stf', n: 'Neutron anvil', tag: 'ANV', costs: [4e7, 4e9, 4e11], unl: siteStar,
+    val: L => Math.pow(1.15, L), f: v => '×' + v.toFixed(2), note: 'What strikes it is remade' },
+  { id: 'nov', cat: 'stf', n: 'Supernova', tag: 'NOV', b: 4.5e6, r: 1.7, cap: 6, unl: siteStar,
+    val: L => 4 * L, f: v => '+' + r1(v) + '% qubits', note: 'The end of a star, kept in a jar' }
+);
+const RIG_PROD = { skl: 1, vwf: 1, stc: 1, anv: 1, clk: 1, cor: 1, clu: 1, psu: 1, sld: 1, run: 1, can: 1, tnt: 1, prt: 1, ram: 1, wfr: 1 };
 const RIGM = {}; RIG.forEach(u => { RIGM[u.id] = u; });
 
 // ---------- clients / contracts ----------
@@ -277,6 +306,33 @@ const QP = [
   { id: 'q16', n: 'Superposition IV',  d: '×8 cycles',                            c: 60, req: 'q14', fx: M => { M.g *= 8; } }
 ];
 
+// ---------- skill grid: permanent branches, bought with microcode (inner nodes) and qubits (outer nodes) ----------
+const GRID = [
+  { id: 'gs1', br: 'spd', n: 'Clock tree',        d: 'Tasks run 30% faster',                        cur: 'mu', c: 3e6,  fx: M => { M.ps *= 1.3; } },
+  { id: 'gs2', br: 'spd', n: 'Parallel lattice',  d: '+1 thread',                                   cur: 'mu', c: 6e7,  req: 'gs1', fx: M => { M.thr += 1; } },
+  { id: 'gs3', br: 'spd', n: 'Hyperclock',        d: '×2.5 cycles',                                 cur: 'qb', c: 40,   req: 'gs2', fx: M => { M.g *= 2.5; } },
+  { id: 'gs4', br: 'spd', n: 'Zeno clock',        d: '×4 cycles',                                   cur: 'qb', c: 120,  req: 'gs3', fx: M => { M.g *= 4; } },
+  { id: 'gh1', br: 'hot', n: 'Heat pipes',        d: 'Cooling ×1.5',                                cur: 'mu', c: 3e6,  fx: M => { M.coolM *= 1.5; } },
+  { id: 'gh2', br: 'hot', n: 'Frost sigil',       d: 'Overclock +0.5×, heat ceiling +30',           cur: 'mu', c: 6e7,  req: 'gh1', fx: M => { M.oc += 0.5; M.hcap += 30; } },
+  { id: 'gh3', br: 'hot', n: 'Absolute zero',     d: 'Cooling ×2',                                  cur: 'qb', c: 40,   req: 'gh2', fx: M => { M.coolM *= 2; } },
+  { id: 'gh4', br: 'hot', n: 'Throttle ward',     d: 'Throttled output stays at 70% instead of 35%', cur: 'qb', c: 120, req: 'gh3', fx: M => { M.thrF = 0.7; } },
+  { id: 'gd1', br: 'drk', n: 'Blood ledger',      d: 'Microcode gain ×1.5',                         cur: 'mu', c: 3e6,  fx: M => { M.muG *= 1.5; } },
+  { id: 'gd2', br: 'drk', n: 'Echo grimoire',     d: 'Tasks yield ×3 data',                         cur: 'mu', c: 6e7,  req: 'gd1', fx: M => { M.dm *= 3; } },
+  { id: 'gd3', br: 'drk', n: 'Omen sight',        d: 'Bargains last 25s longer, gifts pay ×1.5',    cur: 'qb', c: 40,   req: 'gd2', fx: M => { M.bfT += 25; M.giftX *= 1.5; } },
+  { id: 'gd4', br: 'drk', n: 'Sovereign pact',    d: 'Qubit gain ×1.25, microcode gain ×1.5',       cur: 'qb', c: 120,  req: 'gd3', fx: M => { M.qG *= 1.25; M.muG *= 1.5; } }
+];
+const GRIDM = {}; GRID.forEach(g => { GRIDM[g.id] = g; });
+const GRID_BR = [['spd', 'Speed'], ['hot', 'Heat'], ['drk', 'Dark arts']];
+const gridOpen = S => S.st.shr >= 1 || S.st.asc >= 1;
+function buyGrid(S, id) {
+  const g = GRIDM[id];
+  if (!g || S.grid[id] || (g.req && !S.grid[g.req]) || !gridOpen(S)) return false;
+  if ((g.cur === 'mu' ? S.mu : S.qb) < g.c) return false;
+  if (g.cur === 'mu') S.mu -= g.c; else S.qb -= g.c;
+  S.grid[id] = 1; recalc(S); log(S, g.n + ' awakens in the grid.');
+  return true;
+}
+
 // ---------- number formatting ----------
 const SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
 function fmt(n, sci) {
@@ -338,7 +394,7 @@ function newState() {
     v: 2, c: 0, run: 0, tot: 0, g: Array(12).fill(0), data: 0, heat: 0, oc: false, thr: false, fr: 0,
     q: [], pOn: {}, res: {}, rr: {}, mu: 0, muT: 0, node: 0, shop: {}, dm: {}, ach: {}, sto: {}, un: {}, log: [],
     rig: {}, ct: { b: 0, k: 0, p: 0 }, sled: 0, mode: 'std', nmode: 'std',
-    qb: 0, qbT: 0, qp: {}, goal: 0,
+    qb: 0, qbT: 0, qp: {}, grid: {}, bl: 0, cu: 0, goal: 0,
     tut: { intro: 0, seen: {} },
     irq: null, nirq: 70,
     st: { taps: 0, reb: 0, shr: 0, irq: 0, proc: 0, thr: 0, ocT: 0, muAll: 0, cont: 0, boards: 0, asc: 0 },
@@ -371,13 +427,14 @@ function recalc(S) {
     g: 1, gA: 1, gB: 1, tapP: 0, oc: 1.5, ocX: 1, cool: 3, coolM: 1, hcap: 100, heatX: 1,
     thr: 1 + Math.floor(S.node / 3), ps: 1, dm: 1, irqR: 1, irqP: 1, cost: 1, off: 2 + 0.5 * S.node,
     gen: Array(12).fill(1), sg: Array(12).fill(0), muG: 1, reqX: 1, ctRew: 1,
-    noOC: false, noDm: false, startNode: 0, keepDm: false, keepRig: false, keepRack: false
+    thrF: 0.35, qG: 1, bfT: 40, giftX: 1, noOC: false, noDm: false, startNode: 0, keepDm: false, keepRig: false, keepRack: false
   };
   for (const r of RES) if (S.res[r.id]) r.fx(M);
   for (const s of SHOP) if (S.shop[s.id]) s.fx(M);
   for (const m of MIL) if (S.st.reb >= m.n) m.fx(M);
   for (const q of QP) if (S.qp[q.id]) q.fx(M);
   for (const r of RR) { const L = S.rr[r.id] || 0; if (L) r.fx(M, L); }
+  for (const g of GRID) if (S.grid[g.id]) g.fx(M);
   (MODES[S.mode] || MODES.std).fx(M);
   const L = id => { const v = S.rig[id] || 0; return v ? effLv(S, RIGM[id], v) : 0; };
   M.gA += 0.03 * L('clk') + 0.025 * L('cor') + 0.015 * L('psu');
@@ -397,6 +454,9 @@ function recalc(S) {
   M.gA += 0.02 * L('tnt'); M.irqP *= 1 + 0.08 * L('eyr'); M.gB *= Math.pow(1.12, L('prt')); M.cost *= 1 - 0.01 * L('tid');
   M.oc += 0.03 * L('vrm');
   M.gA += 0.02 * L('ram'); M.tapP += 0.02 * L('lan'); M.ctRew *= 1 + 0.03 * L('pre'); M.heatX *= 1 - 0.025 * L('brp'); M.dm *= 1 + 0.08 * L('ecc');
+  M.gA += 0.025 * L('skl'); M.muG *= 1 + 0.03 * L('rel'); M.cool += 1.2 * L('gwd'); M.off += 3 * L('lch');
+  M.gA += 0.025 * L('vwf'); M.tapP += 0.04 * L('evh'); M.hcap += 4 * L('sng'); M.ps *= 1 + 0.03 * L('ent');
+  M.gA += 0.03 * L('stc'); M.oc += 0.05 * L('pls'); M.gB *= Math.pow(1.15, L('anv')); M.qG *= 1 + 0.04 * L('nov');
   M.gA += 0.02 * L('wfr'); M.muG *= 1 + 0.02 * L('lsr'); M.oc += 0.04 * L('lns'); M.hcap += 3 * L('clr');
   M.oc *= M.ocX;
   M.heatX *= 1 + 0.025 * L('clk');
@@ -423,7 +483,9 @@ function gMult(S) {
   const M = S._M;
   let m = M.g * M.gA * M.gB * muMult(S) * Math.pow(NODE_MULT, S.node) * (1 + 0.012 * S._ac) * qMult(S) * sledMult(S);
   if (S.oc) m *= M.oc;
-  if (S.thr) m *= 0.35;
+  if (S.thr) m *= S._M.thrF;
+  if (S.bl > 0) m *= 1.6;
+  if (S.cu > 0) m *= 0.6;
   if (S.fr > 0) m *= 3;
   if (S.bf > 0) m *= 2;
   return m;
@@ -691,7 +753,7 @@ function seedCycles(S) { return S.node ? 60 * GENS[0].b * costScale(S) * S._M.co
 function resetRun(S) {
   S.mode = S.nmode;
   recalc(S);
-  S.c = seedCycles(S); S.run = 0; S.heat = 0; S.oc = false; S.thr = false; S.fr = 0; S.q = []; S.irq = null; S.nirq = 60;
+  S.c = seedCycles(S); S.run = 0; S.heat = 0; S.oc = false; S.thr = false; S.fr = 0; S.q = []; S.irq = null; S.nirq = 60; S.bl = 0; S.cu = 0;
   S.g = S._M.sg.slice();
 }
 function reboot(S) {
@@ -700,6 +762,7 @@ function reboot(S) {
   S.mu += g; S.muT += g; S.st.muAll += g; S.st.reb++;
   resetRun(S);
   log(S, 'Reboot. +' + g + ' microcode.');
+  S._ev.push({ k: 'reb' });
   slow(S);
   return true;
 }
@@ -715,6 +778,7 @@ function nodeNote(n) {
   GENS.forEach(g => { if (g.u === n) a.push(g.n); });
   PROCS.forEach(p => { if (p.u === n) a.push(p.n + ' task'); });
   if (n % 3 === 0) a.push('+1 thread');
+  if (n === 7) a.push('the Ossuary'); if (n === 8) a.push('the Void Foundry'); if (n === 9) a.push('the Star Forge');
   a.push('rig caps +4', '+30 min offline');
   return a.join(', ');
 }
@@ -727,14 +791,15 @@ function shrink(S) {
   S.node++; S.st.shr++;
   resetRun(S);
   log(S, 'Die shrink. The stone is now ' + NODES[S.node] + '.');
+  S._ev.push({ k: 'shr' });
   slow(S);
   return true;
 }
 
 // ---------- prestige: ascension (burns lifetime microcode into qubits) ----------
-function qGain(S) { return S.muT < ASC_MU ? 0 : Math.floor(Math.sqrt(S.muT / ASC_DIV)); }
+function qGain(S) { return S.muT < ASC_MU ? 0 : Math.floor(Math.sqrt(S.muT / ASC_DIV) * S._M.qG); }
 const canAscend = S => qGain(S) >= 1;
-function qNext(S) { return ASC_DIV * Math.pow(qGain(S) + 1, 2); }
+function qNext(S) { return ASC_DIV * Math.pow((qGain(S) + 1) / S._M.qG, 2); }
 function ascend(S) {
   const q = qGain(S);
   if (q < 1) return false;
@@ -749,6 +814,7 @@ function ascend(S) {
   S.node = S._M.startNode;
   resetRun(S);
   log(S, 'Ascension. +' + q + ' qubits. The stone forgets; the pattern does not.');
+  S._ev.push({ k: 'asc' });
   slow(S);
   return true;
 }
@@ -766,7 +832,9 @@ function clickIrq(S) {
   const M = S._M, c = cps(S);
   let msg;
   if (q.k === 'o') { S.irq = q; return omen(S, 2); }
-  if (q.k === 'f') { S.fr = 20; msg = 'Interrupt storm: ×3 for 20s'; }
+  if (q.k === 'w') { S.bl = 45; S.data += 3 * dataMult(S); msg = 'Blessing: ×1.6 output for 45s'; }
+  else if (q.k === 'x') { const v = 6 * dataMult(S) * M.irqP; S.data += v; msg = 'Curse banished: +' + fmt(v) + ' data'; }
+  else if (q.k === 'f') { S.fr = 20; msg = 'Interrupt storm: ×3 for 20s'; }
   else if (q.k === 'd') { const v = 8 * dataMult(S) * M.irqP; S.data += v; msg = '+' + fmt(v) + ' data'; }
   else { const v = Math.max(25, c * (45 + Math.random() * 45) * M.irqP); add(S, v); msg = '+' + fmt(v) + ' cycles'; }
   return msg;
@@ -781,8 +849,8 @@ const OMEN = [
 function omen(S, i) {
   if (!S.irq || S.irq.k !== 'o') return '';
   let msg = '';
-  if (i === 0) { const v = cps(S) * 120; add(S, v); S.heat = Math.min(S._M.hcap * 0.95, S.heat + S._M.hcap * 0.25); msg = 'The gift: +' + fmt(v) + ' cycles'; }
-  else if (i === 1) { if (S.c <= 0) return ''; S.c *= 0.75; S.bf = 40; msg = 'Bargain struck: ×2 output for 40s'; }
+  if (i === 0) { const v = cps(S) * 120 * S._M.giftX; add(S, v); S.heat = Math.min(S._M.hcap * 0.95, S.heat + S._M.hcap * 0.25); msg = 'The gift: +' + fmt(v) + ' cycles'; }
+  else if (i === 1) { if (S.c <= 0) return ''; S.c *= 0.75; S.bf = S._M.bfT; msg = 'Bargain struck: ×2 output for ' + S._M.bfT + 's'; }
   else { const v = 4 * dataMult(S); S.data += v; msg = 'Refused: +' + fmt(v) + ' data'; }
   S.irq = null; S.st.irq++; S.st.omen = (S.st.omen || 0) + 1;
   return msg;
@@ -837,6 +905,10 @@ function checkGoals(S, silent) {
 function hint(S) {
   if (S.thr) return { tag: 'HEAT', tone: 'red', t: 'Throttled. Output is cut until heat falls to 25%. Cooling lives in Forge, Thermal.' };
   if (S.oc && heatPct(S) > 80) return { tag: 'HEAT', tone: 'red', t: 'Heat is ' + Math.round(heatPct(S)) + '%. Disengage overclock or run fsck before it throttles.' };
+  if (S.cu > 0) return { tag: 'CURSE', tone: 'red', t: 'A curse clings to the chip: output ×0.6 for ' + Math.ceil(S.cu) + 's.' };
+  if (S.bl > 0) return { tag: 'BLESSED', tone: 'grn', t: 'A blessing holds: output ×1.6 for ' + Math.ceil(S.bl) + 's.' };
+  if (S.irq && S.irq.k === 'x') return { tag: 'CURSE', tone: 'red', t: 'A curse approaches. Tap it before it lands, or pay in heat and output.' };
+  if (S.irq && S.irq.k === 'w') return { tag: 'BLESSING', tone: 'grn', t: 'A blessing drifts past. Tap it for ×1.6 output.' };
   if (S.bf > 0) return { tag: 'BARGAIN', tone: 'amb', t: 'The bargain holds: output doubled for ' + Math.ceil(S.bf) + 's.' };
   if (S.irq && S.irq.k === 'o') return { tag: 'OMEN', tone: 'amb', t: 'A voice offers three roads. Tap the glowing omen to choose.' };
   if (S.irq) return { tag: 'EVENT', tone: 'amb', t: 'An interrupt is waiting. Tap the chip at the bottom of the screen.' };
@@ -875,6 +947,12 @@ const HELP = [
     b: 'Every cleared pact board slides a sled into the rack. FORGE, Rack upgrades make each sled stronger, add bays for more sleds, cool the chip and speed up pacts.' },
   { id: 'occult', t: 'The Occult', u: S => S.node >= 1 || S.st.reb >= 2,
     b: 'Forbidden parts in FORGE, Occult: runic etching, a watching eye, a gargoyle heatsink, blood conduits, soul jars, a crypt cache and a summoning circle that adds threads. More of them open as you reboot and shrink the die.' },
+  { id: 'late', t: 'The deep Domain', u: S => S.node >= 7,
+    b: 'Three more sites wait in the deep: the Ossuary (14nm), the Void Foundry (10nm) and the Star Forge (7nm). Skulls and reliquaries, null wafers and an event horizon, a captured star and a neutron anvil. The Star Forge also holds a Supernova that raises the qubits you earn.' },
+  { id: 'grid', t: 'The skill grid', u: S => S.st.shr >= 1 || S.st.asc >= 1,
+    b: 'REBIRTH, Grid holds three permanent branches: Speed, Heat and Dark arts. The inner nodes cost microcode, the outer ones cost qubits. The grid survives reboots, shrinks and ascensions. Each branch must be bought in order.' },
+  { id: 'blessing', t: 'Blessings and curses', u: S => S.node >= 1 && S.un.pr,
+    b: 'Now and then a pale light or a black one drifts by. Tap a blessing for ×1.6 output for 45 seconds. Tap a curse to banish it for data; if it lands, output drops to ×0.6 for 30 seconds and the chip takes a burst of heat. They only last 12 seconds.' },
   { id: 'domain', t: 'The Domain', u: S => S.node >= 2,
     b: 'Beyond the chip lie three dark sites: the Crypt (die 90nm), the Altar (45nm) and the Abyss (22nm). Each one has its own view in the schematic, and every upgrade you buy in DOMAIN visibly attaches to it: coffins, ravens and ghouls; candles, a chalice and standing stones; tentacles, eyes and a void portal. Each site boosts something different, so none replaces the others.' },
   { id: 'mem', t: 'The Memory bus', u: S => S.st.reb >= 1,
@@ -940,13 +1018,22 @@ function tick(S, dt) {
   if (S.un.ct) ctWork(S, ctRate(S) * dt);
 
   // interrupts
-  if (S.irq) { S.irq.l -= dt; if (S.irq.l <= 0) S.irq = null; }
+  if (S.bl > 0) S.bl = Math.max(0, S.bl - dt);
+  if (S.cu > 0) S.cu = Math.max(0, S.cu - dt);
+  if (S.irq) {
+    S.irq.l -= dt;
+    if (S.irq.l <= 0) {
+      if (S.irq.k === 'x') { S.cu = 30; S.heat = Math.min(S._M.hcap * 0.95, S.heat + S._M.hcap * 0.25); log(S, 'The curse takes hold.'); S._ev.push({ k: 'curse' }); }
+      S.irq = null;
+    }
+  }
   else {
     S.nirq -= dt * M.irqR;
     if (S.nirq <= 0) {
       const r = Math.random();
-      const k = r < 0.5 ? 'b' : r < 0.72 ? (S.un.pr ? 'd' : 'b') : r < 0.88 ? 'f' : (S.un.pr ? 'o' : 'b');
-      S.irq = { k, l: k === 'o' ? 30 : 15 }; S.nirq = 70 + Math.random() * 70;
+      const wc = S.node >= 1 && S.un.pr && Math.random() < 0.16;
+      const k = wc ? (Math.random() < 0.55 ? 'w' : 'x') : r < 0.5 ? 'b' : r < 0.72 ? (S.un.pr ? 'd' : 'b') : r < 0.88 ? 'f' : (S.un.pr ? 'o' : 'b');
+      S.irq = { k, l: k === 'o' ? 30 : (k === 'w' || k === 'x') ? 12 : 15 }; S.nirq = 70 + Math.random() * 70;
     }
   }
 
@@ -968,7 +1055,7 @@ function tick(S, dt) {
 }
 function offline(S, sec) {
   sec = Math.min(sec, S._M.off * 3600);
-  S.oc = false; S.thr = false; S.heat = 0; S.fr = 0;
+  S.oc = false; S.thr = false; S.heat = 0; S.fr = 0; S.bl = 0; S.cu = 0;
   add(S, cps(S) * sec);
   ctWork(S, ctRate(S) * sec * 0.5);
   S.t += sec;
@@ -983,7 +1070,7 @@ function advance(S, dt) {
 
 const CORE = {
   MS, GENS, NODES, REQ, PROCS, RES, RR, SHOP, DAEMONS, ACH, PM, ARS, NODE_MULT, RIG, RIGM, CLIENTS, STRESS_NAME,
-  MODES, MODE_IDS, MIL, QP, GOALS, HELP, ASC_MU, costScale, permMult,
+  MODES, MODE_IDS, MIL, QP, GRID, GRID_BR, gridOpen, buyGrid, GOALS, HELP, ASC_MU, costScale, permMult,
   fmt, fmtI, newState, serialize, deserialize, recalc, log,
   cps, gMult, genMult, muMult, qMult, sledMult, maxSleds, genProd, tapValue, tap, cost, maxBuy, genAvail, buyGen, toggleOC, dataMult, dmBase, heatPct,
   GEN_CAP, rigLv, rigTotal, rigCap, rigCost, rigVal, rigDelta, buyRig, refRate, stressLvl,

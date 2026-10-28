@@ -190,3 +190,34 @@ h2:first-child{margin-top:2px}
 
 nav button{white-space:nowrap;font-size:9px;letter-spacing:.08em;padding:12px 0}
 nav button.new::after{margin-left:3px;width:4px;height:4px}
+
+/* v13: scrollable view bar, rarity glow, sparks, rebirth animations, blessings and curses */
+#sbar{gap:6px}
+#views{flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+#views::-webkit-scrollbar{display:none}
+#views button{flex:none;padding:2px 7px;letter-spacing:.12em;white-space:nowrap}
+#fold{flex:none}
+.tile.tier2{border-color:#8a6d3a;box-shadow:inset 0 0 0 1px #b08d5744,0 0 10px #b08d5722}
+.tile.mastered{opacity:1;border-color:var(--gold);box-shadow:inset 0 0 0 1px #b08d5788,0 0 14px #b08d5744;background:linear-gradient(180deg,#17130c,var(--p))}
+.tile.mastered .tg::after{content:' ◆';color:var(--gold)}
+#fx i.spk{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--gold);box-shadow:0 0 4px #b08d57;animation:spk .6s ease-out forwards}
+@keyframes spk{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.irq.bless{border-color:#cfd8c0;color:#e8f0dc;background:#10160e;box-shadow:0 0 14px #9ab07a55}
+.irq.curse{border-color:#7a3a8a;color:#cdb0e0;background:#140a18;box-shadow:0 0 14px #7a3a8a66}
+.bigfx{position:fixed;inset:0;z-index:20;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.bigfx b{font:700 22px var(--hd);letter-spacing:.5em;color:var(--gold);text-shadow:0 0 18px #b08d57;opacity:0}
+.bigfx.reb{background:#000;animation:rebfx 2.3s ease forwards}
+.bigfx.reb b{animation:fadetxt 2.3s ease forwards}
+@keyframes rebfx{0%{opacity:0}18%{opacity:1}55%{opacity:1}100%{opacity:0}}
+@keyframes fadetxt{0%,15%{opacity:0}35%,60%{opacity:1}100%{opacity:0}}
+.bigfx.reb::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff08 0 2px,transparent 2px 4px);animation:scan 2.3s linear forwards}
+@keyframes scan{from{transform:translateY(-8px)}to{transform:translateY(8px)}}
+.bigfx.shr{animation:shrfx 2.3s ease forwards;background:radial-gradient(circle,#1a1208cc,#000000dd)}
+@keyframes shrfx{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+.bigfx.shr b{animation:fadetxt 2.3s ease forwards;position:relative;z-index:1}
+.bigfx .beam{position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#ffe9c4,transparent);box-shadow:0 0 18px 4px #b08d57;animation:beam 1.6s ease-in-out .2s forwards;opacity:0}
+@keyframes beam{0%{top:0;opacity:1}100%{top:100%;opacity:1}}
+.bigfx.asc{animation:ascfx 3.2s ease forwards;background:radial-gradient(circle,#ffe9c4 0,#b08d57 18%,#1a1208 55%,#000 100%)}
+.bigfx.asc b{animation:fadetxt 3.2s ease forwards;color:#1a1208;text-shadow:none}
+@keyframes ascfx{0%{opacity:0;transform:scale(.6)}25%{opacity:1;transform:scale(1)}65%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.bigfx{display:none}#views{scroll-behavior:auto}}

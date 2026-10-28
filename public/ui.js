@@ -64,6 +64,26 @@ function floatTxt(x, y, t) {
   setTimeout(() => s.remove(), 850);
 }
 
+function spark(x, y) {
+  if (!(x > 0)) return;
+  const fx = $('#fx'); if (fx.children.length > 26) return;
+  for (let i = 0; i < 7; i++) {
+    const s = h('i', 'spk'), a = Math.random() * 6.283, d = 18 + Math.random() * 22;
+    s.style.left = x + 'px'; s.style.top = y + 'px'; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d - 8 + 'px');
+    fx.append(s); setTimeout(() => s.remove(), 650);
+  }
+}
+let lastBig = -1e9;
+function bigFx(kind) {
+  const now = performance.now();
+  if (now - lastBig < 5000) return; lastBig = now;
+  const d = h('div', 'bigfx ' + kind); document.body.append(d);
+  if (kind === 'reb') { d.append(h('b', '', 'REBOOT')); }
+  if (kind === 'shr') { d.append(h('b', '', C.NODES[S.node])); d.append(h('i', 'beam')); }
+  if (kind === 'asc') { d.append(h('b', '', 'ASCENSION')); }
+  setTimeout(() => d.remove(), kind === 'asc' ? 3200 : 2400);
+}
+
 // ---------- shell: tabs and subtabs ----------
 const TABS = [
   { id: 'rig', n: 'FORGE', ok: () => true },
@@ -77,16 +97,21 @@ const SUBS = {
   rig: [['units', 'Units', () => true], ['cmp', 'Compute', () => S.un.cmp], ['th', 'Thermal', () => S.un.oc], ['ing', 'Ingress', () => S.un.ct], ['pw', 'Power', () => S.un.pw], ['rk', 'Rack', () => S.sled > 0 || S.st.boards > 0], ['occ', 'Occult', () => S.node >= 1 || S.st.reb >= 2], ['mem', 'Memory', () => S.st.reb >= 1], ['fab', 'Foundry', () => S.node >= 1]],
   work: [['procs', 'Incantations', () => S.un.pr], ['cl', 'Pacts', () => S.un.ct]],
   lab: [],
-  dom: [['crp', 'The Crypt', () => S.node >= 2], ['alt', 'The Altar', () => S.node >= 4], ['aby', 'The Abyss', () => S.node >= 6]],
-  rebirth: [['reboot', 'Reboot', () => S.un.rb], ['shop', 'Shop', () => S.un.rb], ['dm', 'Daemons', () => S.un.dm], ['shr', 'Shrink', () => S.un.rb], ['asc', 'Ascend', () => S.un.asc]],
+  dom: [['crp', 'The Crypt', () => S.node >= 2], ['alt', 'The Altar', () => S.node >= 4], ['aby', 'The Abyss', () => S.node >= 6], ['oss', 'Ossuary', () => S.node >= 7], ['vfd', 'Void Foundry', () => S.node >= 8], ['stf', 'Star Forge', () => S.node >= 9]],
+  rebirth: [['reboot', 'Reboot', () => S.un.rb], ['shop', 'Shop', () => S.un.rb], ['dm', 'Daemons', () => S.un.dm], ['shr', 'Shrink', () => S.un.rb], ['grid', 'Grid', () => C.gridOpen(S)], ['asc', 'Ascend', () => S.un.asc]],
   more: [['stats', 'Stats', () => true], ['guide', 'Guide', () => true], ['seals', 'Seals', () => true], ['log', 'Chronicle', () => true], ['set', 'Settings', () => true]]
 };
 let curTab = 'rig', curSub = { rig: 'units', work: 'procs', lab: '', rebirth: 'reboot', dom: 'crp', more: 'stats' };
-const seenT = {}, seenS = {};
+let seenT = {}, seenS = {};
+function markSeen() {
+  // old saves and fresh games: everything already on screen counts as seen, so dots only mark what is truly new
+  if (!S.seen) { S.seen = { t: {}, s: {} }; TABS.forEach(t => { if (t.ok()) { S.seen.t[t.id] = 1; subsFor(t.id).forEach(x => { S.seen.s[t.id + '.' + x[0]] = 1; }); } }); }
+  seenT = S.seen.t; seenS = S.seen.s;
+}
 let view = null, navSig = '', subSig = '';
 const main = $('#main'), nav = $('#nav'), subsEl = $('#subs');
 function subsFor(t) { return SUBS[t].filter(s => s[2]()); }
-const SITEVIEW = { crp: 'crypt', alt: 'altar', aby: 'abyss', rk: 'rack', mem: 'mem', fab: 'fab' };
+const SITEVIEW = { crp: 'crypt', alt: 'altar', aby: 'abyss', rk: 'rack', mem: 'mem', fab: 'fab', oss: 'ossuary', vfd: 'void', stf: 'star' };
 function syncView() { const v = SITEVIEW[curSub[curTab]]; if (v && (curTab === 'dom' || curTab === 'rig') && SCENE.views(S).indexOf(v) >= 0) { sceneView = v; renderViews(); } }
 function setTab(id) {
   curTab = id; seenT[id] = 1;
@@ -116,7 +141,7 @@ function viewFor(t, s) {
   if (t === 'work') return s === 'cl' ? vClients() : vProcs();
   if (t === 'lab') return vLab();
   if (t === 'dom') return vRig(s);
-  if (t === 'rebirth') return { reboot: vReboot, shop: vShop, dm: vDaemons, shr: vShrink, asc: vAscend }[s]();
+  if (t === 'rebirth') return { reboot: vReboot, shop: vShop, dm: vDaemons, shr: vShrink, grid: vGrid, asc: vAscend }[s]();
   return { stats: vStats, guide: vGuide, seals: vSeals, log: vLog, set: vSettings }[s]();
 }
 function rebuild(reset) {
@@ -149,7 +174,7 @@ function vUnits() {
         const p1 = h('div', 'sub'), p2 = h('div', 'sub', G[i].d), bar = h('div', 'bar'); const bi = h('i'); bar.append(bi);
         info.append(nm, p1, bar, p2);
         const b = h('button', 'buy act'); const bl = h('small'); b.append(h('span'), bl);
-        b.onclick = () => { const k = Math.min(bm || Math.max(1, C.maxBuy(S, i)), C.GEN_CAP - S.g[i]); if (k > 0 && C.buyGen(S, i, k)) { } };
+        b.onclick = e => { const k = Math.min(bm || Math.max(1, C.maxBuy(S, i)), C.GEN_CAP - S.g[i]); if (k > 0 && C.buyGen(S, i, k)) spark(e.clientX, e.clientY); };
         row.append(info, b); r.append(row);
         rows[i] = { own, p1, bi, b, bs: b.firstChild, bl };
       });
@@ -194,9 +219,9 @@ function vRig(cat) {
   return {
     sig: () => items.map(u => u.unl(S) ? 1 : 0).join() + C.NODES[S.node],
     build(r) {
-      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'The Rack', occ: 'The Occult', crp: 'The Crypt', alt: 'The Altar', aby: 'The Abyss', mem: 'The Memory bus', fab: 'The Foundry' };
+      const titles = { cmp: 'Compute', th: 'Thermal', ing: 'Ingress', pw: 'Power', rk: 'The Rack', occ: 'The Occult', crp: 'The Crypt', alt: 'The Altar', aby: 'The Abyss', mem: 'The Memory bus', fab: 'The Foundry', oss: 'The Ossuary', vfd: 'The Void Foundry', stf: 'The Star Forge' };
       r.append(h('h2', '', titles[cat]));
-      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.', crp: 'A vault beneath the chip. Every upgrade attaches to the view: coffins of data, bone ribs, ravens, ghouls.', alt: 'A rite of fire and blood. Candles, a chalice, standing stones and a scrying orb appear as you buy them.', aby: 'Something old looks back. Tentacles, floating eyes, a void portal and a tide of whispers.', mem: 'Opened by your first reboot. RAM sticks, bus lanes, a prefetcher, a branch oracle and warding all show on the MEMORY view.', fab: 'Opened by your first die shrink. A wafer belt, a lithography beam, lenses and cleanroom wards show on the FAB view.' };
+      const hints = { cmp: 'Output upgrades. Every level multiplies your cycles. A die shrink raises the level caps.', th: 'Cooling keeps you overclocked longer. Heat above 100% throttles the chip.', ing: 'Ingress feeds the client rack: faster contracts, bigger payouts, better interrupts.', pw: 'Clean power: steady output and stronger overclock.', rk: 'Upgrade the rack itself: richer sleds, more bays, cold aisles and cabling.', occ: 'Forbidden parts. Each is a small bargain with the dark, paid for in cycles.', crp: 'A vault beneath the chip. Every upgrade attaches to the view: coffins of data, bone ribs, ravens, ghouls.', alt: 'A rite of fire and blood. Candles, a chalice, standing stones and a scrying orb appear as you buy them.', aby: 'Something old looks back. Tentacles, floating eyes, a void portal and a tide of whispers.', mem: 'Opened by your first reboot. RAM sticks, bus lanes, a prefetcher, a branch oracle and warding all show on the MEMORY view.', fab: 'Opened by your first die shrink. A wafer belt, a lithography beam, lenses and cleanroom wards show on the FAB view.', oss: 'Beneath the crypt, deeper bone. A choir of skulls, reliquaries, a grave wind and lich vessels fill the OSSUARY view.', vfd: 'A foundry that makes nothing on purpose. Null wafers, an event horizon, singularity coils and entropy sinks show on the VOID view.', stf: 'You hold a star. A stellar core, pulsar beams, neutron anvils and supernova jars show on the STAR view.' };
       r.append(h('div', 'note', hints[cat]));
       const g = h('div', 'grid'); r.append(g);
       items.forEach(u => {
@@ -206,7 +231,7 @@ function vRig(cat) {
         const ba = h('div', 'ba'), nt = h('div', 'nt', u.note);
         const bar = h('div', 'tbar'); const bi = h('i'); bar.append(bi);
         const b = h('button', 'buy'); const bs = h('span'), bl = h('small', '', 'UPGRADE'); b.append(bs, bl);
-        b.onclick = () => { C.buyRig(S, u.id); };
+        b.onclick = e => { if (C.buyRig(S, u.id)) spark(e.clientX, e.clientY); };
         t.append(h('div', 'tg', u.tag), h('div', 'nm', u.n), lv, best, ba, nt, bar, b); g.append(t);
         tiles[u.id] = { t, lv, best, ba, bi, b, bs, bl, u };
       });
@@ -224,7 +249,7 @@ function vRig(cat) {
         const c = max ? 0 : C.rigCost(S, u, L);
         setT(T.bs, max ? 'MAX' : F(c)); setT(T.bl, max ? 'MAXED' : t2 ? 'EMPOWER' : 'UPGRADE');
         setC(T.b, 'off', max || S.c < c);
-        setC(T.t, 'max', max); setC(T.t, 'best', bid === id && !max);
+        setC(T.t, 'max', max); setC(T.t, 'best', bid === id && !max); setC(T.t, 'tier2', t2 && !max); setC(T.t, 'mastered', max);
         show(T.best, bid === id && !max);
       }
     }
@@ -456,6 +481,36 @@ function vShrink() {
     }
   };
 }
+function vGrid() {
+  const rows = {};
+  return {
+    sig: () => Object.keys(S.grid).join(),
+    build(r) {
+      r.append(h('h2', '', 'Skill grid'));
+      const top = h('div', 'panel'); const pr = h('div', 'prow'); const mv = h('b', 'tl'); pr.append(h('span', 'lbl', 'Microcode · Qubits'), mv); top.append(pr); r.append(top); this.mv = mv;
+      r.append(h('div', 'note', 'Permanent. Survives reboots, shrinks and ascensions. Inner nodes cost microcode, outer nodes cost qubits. Buy each branch in order.'));
+      C.GRID_BR.forEach(([br, name]) => {
+        r.append(h('h2', '', name));
+        C.GRID.filter(g => g.br === br).forEach(g => {
+          const row = h('div', 'row'), info = h('div', 'info'); info.append(h('div', 'nm', g.n), h('div', 'sub', g.d));
+          const bt = h('button', 'buy act'); const bs = h('span'), bl = h('small'); bt.append(bs, bl);
+          bt.onclick = e => { if (C.buyGrid(S, g.id)) { spark(e.clientX, e.clientY); toast(g.n + ' awakens'); } };
+          row.append(info, bt); r.append(row); rows[g.id] = { g, row, bt, bs, bl };
+        });
+      });
+    },
+    upd() {
+      setT(this.mv, FI(S.mu) + ' µ · ' + S.qb + ' Q');
+      for (const id in rows) {
+        const R = rows[id], g = R.g, have = !!S.grid[id], lock = g.req && !S.grid[g.req];
+        const bal = g.cur === 'mu' ? S.mu : S.qb;
+        setC(R.row, 'have', have);
+        setT(R.bs, have ? 'OWNED' : lock ? 'LOCKED' : (g.cur === 'mu' ? FI(g.c) : g.c)); setT(R.bl, have ? '' : lock ? 'BUY THE NODE BEFORE' : g.cur === 'mu' ? 'µ' : 'QUBITS');
+        setC(R.bt, 'off', have || lock || bal < g.c);
+      }
+    }
+  };
+}
 function vAscend() {
   const rows = {};
   return {
@@ -594,6 +649,11 @@ const COACH = [
   ['crp', () => S.node >= 2, 'The Crypt', 'A vault opened beneath the chip. DOMAIN, The Crypt: every upgrade you buy attaches to the CRYPT view: coffins of data, bone ribs, ravens and ghouls.'],
   ['alt', () => S.node >= 4, 'The Altar', 'An altar rose from the stone. DOMAIN, The Altar: candles, a blood chalice, standing stones and a scrying orb. More cycles, more microcode.'],
   ['aby', () => S.node >= 6, 'The Abyss', 'The floor gave way. DOMAIN, The Abyss: tentacles, floating eyes, a void portal and the tide of whispers. Something looks back.'],
+  ['oss', () => S.node >= 7, 'The Ossuary', 'Deeper than the crypt, older than the bones in it. DOMAIN, The Ossuary: a choir of skulls, reliquaries, a grave wind and lich vessels. It has its own OSSUARY view.'],
+  ['vfd', () => S.node >= 8, 'The Void Foundry', 'A foundry that makes nothing on purpose. DOMAIN, The Void Foundry: null wafers, an event horizon, singularity coils and entropy sinks. See the VOID view.'],
+  ['stf', () => S.node >= 9, 'The Star Forge', 'You hold a star now. DOMAIN, The Star Forge: a stellar core, pulsar clocks, neutron anvils and supernova jars that raise your qubits. See the STAR view.'],
+  ['grid', () => C.gridOpen(S), 'The skill grid', 'REBIRTH now has a Grid: three permanent branches, Speed, Heat and Dark arts. Inner nodes cost microcode, outer nodes cost qubits. It survives every reset.'],
+  ['bless', () => S.node >= 1 && S.un.pr && S.st.irq >= 5, 'Blessings and curses', 'A pale light means a blessing: tap it for ×1.6 output. A black light is a curse: tap it to banish it before it lands. Both fade in 12 seconds.'],
   ['asc', () => S.un.asc, 'Ascension', 'You are close to the third reset. REBIRTH, Ascend turns lifetime microcode into qubits: permanent multipliers and perks that let you restart further along.']
 ];
 function coachCheck() {
@@ -627,7 +687,9 @@ function renderViews() {
   const sig = vs.join() + sceneView;
   if (box._sig === sig) return; box._sig = sig; box.innerHTML = '';
   if (vs.length < 2) { const b = h('button', 'act', 'CHIP'); box.append(b); return; }
-  vs.forEach(v => { const b = h('button', v === sceneView ? 'act' : '', v.toUpperCase()); b.onclick = () => { sceneView = v; renderViews(); }; box.append(b); });
+  const LBL = { chip: 'CHIP', board: 'BOARD', rack: 'RACK', mem: 'MEM', fab: 'FAB', crypt: 'CRYPT', altar: 'ALTAR', abyss: 'ABYSS', ossuary: 'OSSUARY', void: 'VOID', star: 'STAR' };
+  vs.forEach(v => { const b = h('button', v === sceneView ? 'act' : '', LBL[v] || v.toUpperCase()); b.onclick = () => { sceneView = v; renderViews(); }; box.append(b); });
+  const ab = box.querySelector('.act'); if (ab) box.scrollLeft = Math.max(0, ab.offsetLeft - (box.clientWidth - ab.offsetWidth) / 2);
 }
 
 // ---------- HUD ----------
@@ -654,15 +716,19 @@ function hud() {
     setT(el.ocv, S._M.noOC ? 'LOCKED' : S.thr ? 'THROTTLED' : S.oc ? 'ON ×' + S._M.oc.toFixed(2) : 'OFF');
     setC(el.oc, 'on', S.oc); setC(el.oc, 'thr', S.thr);
   }
-  el.irq.hidden = !S.irq;
-  if (S.irq) setT(el.irq, (S.irq.k === 'o' ? 'AN OMEN' : S.irq.k === 'f' ? 'STORM' : S.irq.k === 'd' ? 'DATA PACKET' : 'INTERRUPT') + ' · TAP ' + Math.ceil(S.irq.l) + 's');
+  el.irq.hidden = !S.irq; el.irq.className = 'irq' + (S.irq && S.irq.k === 'x' ? ' curse' : S.irq && S.irq.k === 'w' ? ' bless' : '');
+  if (S.irq) setT(el.irq, (S.irq.k === 'w' ? 'A BLESSING' : S.irq.k === 'x' ? 'A CURSE · BANISH' : S.irq.k === 'o' ? 'AN OMEN' : S.irq.k === 'f' ? 'STORM' : S.irq.k === 'd' ? 'DATA PACKET' : 'INTERRUPT') + ' · TAP ' + Math.ceil(S.irq.l) + 's');
 }
 
 // ---------- events ----------
 function handleEvents() {
   const ev = S._ev; if (!ev.length) return;
   for (const e of ev) {
-    if (e.k === 'job') SCENE.pulse('job');
+    if (e.k === 'job') { SCENE.pulse('job'); const r = $('#stage').getBoundingClientRect(); floatTxt(r.left + r.width * (0.3 + Math.random() * 0.4), r.top + r.height * 0.55, '+' + F(e.c)); }
+    else if (e.k === 'reb') bigFx('reb');
+    else if (e.k === 'shr') bigFx('shr');
+    else if (e.k === 'asc') bigFx('asc');
+    else if (e.k === 'curse') toast('The curse lands.');
     else if (e.k === 'board') { SCENE.pulse('board'); toast('Board cleared. A sled slides in.'); }
     else if (e.k === 'goal') toast('Goal done: +' + F(e.c) + ' cycles' + (e.d ? ' +' + F(e.d) + ' data' : ''));
   }
@@ -689,6 +755,7 @@ function init() {
   }
   C.slow(S);
   knownViews = SCENE.views(S).length;
+  markSeen();
   setTab('rig');
   let last = performance.now(), lastSave = 0, lastUi = 0;
   function frame(ts) {

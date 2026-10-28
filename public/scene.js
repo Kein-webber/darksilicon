@@ -17,6 +17,9 @@ function views(St) {
   if (St.node >= 2) v.push('crypt');
   if (St.node >= 4) v.push('altar');
   if (St.node >= 6) v.push('abyss');
+  if (St.node >= 7) v.push('ossuary');
+  if (St.node >= 8) v.push('void');
+  if (St.node >= 9) v.push('star');
   return v;
 }
 function pulse(kind) { bursts.push({ t: T, k: kind }); if (bursts.length > 6) bursts.shift(); }
@@ -96,7 +99,14 @@ function sigil() {
   cx.restore(); cx.globalAlpha = 1;
 }
 function embers(w, h) {
-  const n = S.oc ? 26 : 14;
+  // drifting dust, a little more of it the deeper you go
+  const nd = 14 + S.node * 2;
+  for (let i = 0; i < nd; i++) {
+    const seed = i * 53.7, x = (((seed * 7.3) % 1 + 1) % 1 * W + T * (0.004 + (i % 4) * 0.002) * (i % 2 ? 1 : -1) + W * 4) % W, y = (((Math.sin(seed) * 0.5 + 0.5) * H) + Math.sin(T / 2200 + seed) * 5);
+    cx.fillStyle = '#8d8a7c'; cx.globalAlpha = 0.10 + 0.08 * Math.sin(T / 1500 + seed); cx.fillRect(x, y, 1, 1);
+  }
+  cx.globalAlpha = 1;
+  const n = (S.oc ? 26 : 14) + S.node * 3;
   for (let i = 0; i < n; i++) {
     const seed = i * 97.13, sp = 0.012 + (i % 5) * 0.004, f = ((T * sp / 1000) + (seed % 1)) % 1;
     const x = ((Math.sin(seed) * 0.5 + 0.5) * W) + Math.sin(T / 900 + seed) * 6, y = H - f * (H + 10);
@@ -616,6 +626,111 @@ function fabView() {
   ring(COL.teal, 20, 70);
 }
 
+// ---- THE OSSUARY: skull choir, reliquaries, grave wind, lich vessels ----
+function ossuaryView() {
+  const L = id => S.rig[id] || 0, ns = L('skl'), nr = L('rel'), nw = L('gwd'), nl = L('lch');
+  box(6, 14, 348, 176, 1, { label: 'THE OSSUARY · CHOIR', val: 'SKULLS ' + ns, stroke: '#4a4540', fill: '#09080a' });
+  cx.strokeStyle = '#1f1d1b';
+  for (let i = 0; i < 6; i++) { const x = 20 + i * 62; cx.beginPath(); cx.moveTo(x, 188); cx.lineTo(x, 60); cx.quadraticCurveTo(x + 31, 18, x + 62, 60); cx.lineTo(x + 62, 188); cx.stroke(); }
+  for (let i = 0; i < 10; i++) {
+    const x = 36 + (i % 5) * 70, y = 44 + Math.floor(i / 5) * 34;
+    cx.fillStyle = '#17161a'; cx.fillRect(x - 14, y + 10, 28, 3);
+    if (i < ns) {
+      const a = pop('skl' + i, true), sing = Math.max(0, Math.sin(T / 500 + i * 1.7)), open = sing * 3.5;
+      cx.save(); cx.globalAlpha = a; cx.translate(x, y);
+      cx.fillStyle = '#bdb8ad'; cx.beginPath(); cx.ellipse(0, 0, 8, 7.5, 0, 0, 6.283); cx.fill();
+      cx.fillRect(-5, 5, 10, 3 + open); cx.fillStyle = '#09080a'; cx.fillRect(-2, 7, 1.5, 2 + open * 0.8); cx.fillRect(1, 7, 1.5, 2 + open * 0.8);
+      cx.beginPath(); cx.arc(-3, -1, 2, 0, 6.283); cx.arc(3, -1, 2, 0, 6.283); cx.fill();
+      cx.fillStyle = hot; cx.globalAlpha = a * (0.4 + 0.6 * sing); cx.fillRect(-3.5, -1.5, 1.5, 1.5); cx.fillRect(2, -1.5, 1.5, 1.5);
+      if (sing > 0.8) { cx.strokeStyle = hot; cx.globalAlpha = a * 0.3; cx.beginPath(); cx.arc(0, 0, 11 + (sing - 0.8) * 30, 0, 6.283); cx.stroke(); }
+      cx.restore();
+    } else if (i === ns) ghostRing(x, y, 8);
+  }
+  for (let i = 0; i < 8; i++) {
+    const x = 26 + i * 41, y = 148;
+    if (i < nr) {
+      const a = pop('rel' + i, true); cx.globalAlpha = a; cx.fillStyle = '#12110f'; cx.fillRect(x, y, 26, 16); cx.strokeStyle = GOLDD; cx.strokeRect(x + .5, y + .5, 25, 15);
+      cx.fillStyle = hot; cx.globalAlpha = a * (0.5 + 0.5 * Math.sin(T / 700 + i)); cx.fillRect(x + 12, y + 3, 2, 10); cx.fillRect(x + 8, y + 6, 10, 2); cx.globalAlpha = 1;
+    } else if (i === nr) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x + .5, y + .5, 25, 15); cx.setLineDash([]); }
+  }
+  for (let k = 0; k < Math.min(8, nw); k++) {
+    cx.strokeStyle = '#8fa6a8'; cx.globalAlpha = 0.16; cx.beginPath();
+    for (let x = 10; x <= 350; x += 6) { const y = 64 + k * 12 + Math.sin(x / 22 + T / 420 + k * 1.3) * 3; if (x === 10) cx.moveTo(x, y); else cx.lineTo(x, y); }
+    cx.stroke(); cx.globalAlpha = 1;
+  }
+  for (let k = 0; k < 3; k++) {
+    const x = 114 + k * 66, y = 110;
+    if (k < nl) {
+      const a = pop('lch' + k, true), pu = 0.5 + 0.5 * Math.sin(T / 650 + k * 2);
+      cx.globalAlpha = a; cx.fillStyle = '#0f1512'; cx.strokeStyle = '#6a7a5a'; cx.beginPath(); cx.moveTo(x - 7, y - 10); cx.lineTo(x + 7, y - 10); cx.lineTo(x + 10, y + 8); cx.lineTo(x - 10, y + 8); cx.closePath(); cx.fill(); cx.stroke();
+      cx.fillStyle = '#9ab07a'; cx.globalAlpha = a * (0.4 + 0.6 * pu); cx.beginPath(); cx.arc(x, y - 1, 3 + pu * 2, 0, 6.283); cx.fill(); cx.globalAlpha = 1;
+    } else if (k === nl) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x - 9.5, y - 10.5, 19, 19); cx.setLineDash([]); }
+  }
+  ring(COL.teal, 20, 70);
+}
+
+// ---- THE VOID FOUNDRY: null wafers, event horizon, singularity coils, entropy sinks ----
+function voidView() {
+  const L = id => S.rig[id] || 0, nw = L('vwf'), nh = L('evh'), nc = L('sng'), ne = L('ent');
+  box(6, 14, 348, 176, 1, { label: 'THE VOID FOUNDRY · NULL', val: 'NULL ×' + nw, stroke: '#2b2540', fill: '#050409' });
+  const g = cx.createRadialGradient(180, 100, 4, 180, 100, 120); g.addColorStop(0, '#1a1030'); g.addColorStop(1, '#050409'); cx.fillStyle = g; cx.fillRect(7, 15, 346, 174);
+  // entropy sinks: dim motes falling into the well
+  for (let i = 0; i < 8; i++) {
+    if (i >= ne) break;
+    const a = pop('ent' + i, true), x = i < 4 ? 26 + i * 18 : 262 + (i - 4) * 18;
+    for (let k = 0; k < 3; k++) { const f = (T / 1800 + k / 3 + i * 0.21) % 1; cx.fillStyle = '#8f80c8'; cx.globalAlpha = a * (1 - f) * 0.5; cx.fillRect(x + Math.sin(f * 6 + i) * 3, 24 + f * 150, 1.5, 5); }
+    cx.globalAlpha = 1;
+  }
+  // singularity coils: jagged arcs reaching the centre
+  const CP = [[20, 24], [340, 24], [20, 176], [340, 176], [180, 20], [180, 180], [24, 100], [336, 100]];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = CP[i];
+    if (i < nc) {
+      const a = pop('sng' + i, true); cx.strokeStyle = '#b39ddb'; cx.globalAlpha = a * (0.25 + 0.5 * Math.max(0, Math.sin(T / 190 + i * 2.1))); cx.beginPath(); cx.moveTo(x, y);
+      for (let k = 1; k <= 6; k++) { const t = k / 6; cx.lineTo(x + (180 - x) * t * 0.78 + Math.sin(T / 120 + i * k) * 5, y + (100 - y) * t * 0.78 + Math.cos(T / 140 + i + k) * 5); }
+      cx.stroke(); cx.fillStyle = '#b39ddb'; cx.fillRect(x - 2, y - 2, 4, 4); cx.globalAlpha = 1;
+    } else if (i === nc) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x - 2.5, y - 2.5, 5, 5); cx.setLineDash([]); }
+  }
+  // event horizon rings, expanding and fading
+  for (let k = 0; k < 3; k++) if (k < nh) { const f = (T / 2600 + k / 3) % 1; cx.strokeStyle = '#b08d57'; cx.globalAlpha = (1 - f) * 0.55 * pop('evh' + k, true); cx.beginPath(); cx.arc(180, 100, 22 + f * 70, 0, 6.283); cx.stroke(); cx.globalAlpha = 1; }
+  // the well
+  cx.fillStyle = '#000'; cx.beginPath(); cx.arc(180, 100, 17, 0, 6.283); cx.fill();
+  cx.save(); cx.translate(180, 100); cx.rotate(-0.35); cx.strokeStyle = '#c98a3a'; cx.globalAlpha = 0.7; cx.lineWidth = 2; cx.beginPath(); cx.ellipse(0, 0, 30, 7, 0, 0, 6.283); cx.stroke(); cx.lineWidth = 1; cx.restore(); cx.globalAlpha = 1;
+  // null wafers in orbit
+  for (let i = 0; i < 10; i++) {
+    if (i >= nw) { if (i === nw) { const an = T / 6000 + i / 10 * 6.283; ghostRing(180 + Math.cos(an) * 74, 100 + Math.sin(an) * 30, 5); } continue; }
+    const a = pop('vwf' + i, true), an = T / 6000 * (1 + (i % 3) * 0.12) + i / 10 * 6.283, x = 180 + Math.cos(an) * (62 + (i % 3) * 12), y = 100 + Math.sin(an) * (26 + (i % 3) * 5), front = Math.sin(an) > 0 ? 1 : 0.5;
+    cx.globalAlpha = a * front; cx.fillStyle = '#000'; cx.strokeStyle = '#b39ddb'; cx.beginPath(); cx.ellipse(x, y, 8, 3, 0, 0, 6.283); cx.fill(); cx.stroke(); cx.globalAlpha = 1;
+  }
+  ring(COL.teal, 20, 70);
+}
+
+// ---- THE STAR FORGE: stellar core, pulsar beams, neutron anvils, supernova rings ----
+function starView() {
+  const L = id => S.rig[id] || 0, ns = L('stc'), np = L('pls'), na = L('anv'), nn = L('nov');
+  box(6, 14, 348, 176, 1, { label: 'THE STAR FORGE · CORE', val: 'CORE ' + ns + '/12', stroke: '#4a3a24', fill: '#07060a' });
+  const R = 12 + ns * 1.4, pu = 1 + Math.sin(T / 600) * 0.05;
+  const gl = cx.createRadialGradient(180, 92, 2, 180, 92, 90); gl.addColorStop(0, 'rgba(255,214,150,' + (0.25 + ns * 0.03) + ')'); gl.addColorStop(1, 'rgba(255,214,150,0)'); cx.fillStyle = gl; cx.fillRect(7, 15, 346, 174);
+  for (let k = 0; k < 4; k++) if (k < nn) { const f = (T / 3200 + k / 4) % 1; cx.strokeStyle = '#ffd596'; cx.globalAlpha = (1 - f) * 0.5 * pop('nov' + k, true); cx.lineWidth = 1.5; cx.beginPath(); cx.arc(180, 92, R + f * 100, 0, 6.283); cx.stroke(); cx.globalAlpha = 1; cx.lineWidth = 1; }
+  for (let k = 0; k < 8; k++) {
+    if (k < np) { const an = T / (1800 - k * 90) * (k % 2 ? -1 : 1) + k * 0.8; cx.save(); cx.translate(180, 92); cx.rotate(an); cx.globalAlpha = 0.3 * pop('pls' + k, true); cx.fillStyle = '#ffe9c4'; cx.beginPath(); cx.moveTo(0, -1.5); cx.lineTo(120, -0.4); cx.lineTo(120, 0.4); cx.lineTo(0, 1.5); cx.fill(); cx.restore(); cx.globalAlpha = 1; }
+    else if (k === np) { cx.setLineDash([2, 3]); cx.strokeStyle = COL.line; cx.beginPath(); cx.moveTo(180, 92); cx.lineTo(180 + Math.cos(k * 0.8) * 90, 92 + Math.sin(k * 0.8) * 90); cx.stroke(); cx.setLineDash([]); }
+  }
+  cx.fillStyle = '#ffd596'; cx.beginPath(); cx.arc(180, 92, R * pu, 0, 6.283); cx.fill();
+  cx.fillStyle = '#fff3d9'; cx.beginPath(); cx.arc(180, 92, R * 0.55 * pu, 0, 6.283); cx.fill();
+  for (let i = 0; i < 12; i++) if (i < ns) { const an = i / 12 * 6.283 + T / 9000; cx.fillStyle = '#c98a3a'; cx.globalAlpha = 0.7; cx.fillRect(180 + Math.cos(an) * (R + 6) - 1, 92 + Math.sin(an) * (R + 6) - 1, 2, 2); cx.globalAlpha = 1; }
+  for (let k = 0; k < 3; k++) {
+    const x = 70 + k * 110, y = 160;
+    if (k < na) {
+      const a = pop('anv' + k, true), st = Math.max(0, Math.sin(T / 500 + k * 2));
+      cx.globalAlpha = a; cx.fillStyle = '#1a1a1e'; cx.strokeStyle = '#8d8a7c'; cx.beginPath(); cx.moveTo(x - 16, y - 8); cx.lineTo(x + 16, y - 8); cx.lineTo(x + 10, y); cx.lineTo(x + 6, y + 6); cx.lineTo(x + 12, y + 12); cx.lineTo(x - 12, y + 12); cx.lineTo(x - 6, y + 6); cx.lineTo(x - 10, y); cx.closePath(); cx.fill(); cx.stroke();
+      if (st > 0.9) { cx.fillStyle = '#ffd596'; for (let q = 0; q < 5; q++) cx.fillRect(x - 4 + q * 3 + Math.sin(T / 40 + q) * 3, y - 14 - (st - 0.9) * 90 * (0.4 + q * 0.2), 1.5, 1.5); }
+      cx.globalAlpha = 1;
+    } else if (k === na) { cx.setLineDash([2, 2]); cx.strokeStyle = COL.line; cx.strokeRect(x - 15.5, y - 7.5, 31, 20); cx.setLineDash([]); }
+  }
+  ring(COL.amb, 20, 70);
+}
+
 function draw(St, ts, view) {
   if (!cv || !cx) return;
   S = St; T = ts;
@@ -628,6 +743,10 @@ function draw(St, ts, view) {
   for (let x = 0; x < w; x += 16) { cx.moveTo(x + .5, 0); cx.lineTo(x + .5, h); }
   for (let y = 0; y < h; y += 16) { cx.moveTo(0, y + .5); cx.lineTo(w, y + .5); }
   cx.stroke();
+  const hf = Math.min(1, S.heat / S._M.hcap), mc = S.thr ? '184,64,63' : hf > 0.7 ? '201,138,58' : '176,141,87';
+  const mg = cx.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, Math.max(w, h) * 0.65);
+  mg.addColorStop(0, 'rgba(' + mc + ',' + (0.03 + 0.17 * hf * (0.75 + 0.25 * Math.sin(T / (1200 - 800 * hf)))).toFixed(3) + ')'); mg.addColorStop(1, 'rgba(' + mc + ',0)');
+  cx.fillStyle = mg; cx.fillRect(0, 0, w, h);
   const sc = Math.min(w / W, h / H);
   cx.save(); cx.translate((w - W * sc) / 2, (h - H * sc) / 2); cx.scale(sc, sc);
   hot = S.thr ? COL.red : S.heat / S._M.hcap > 0.7 ? COL.amb : COL.teal;
@@ -635,7 +754,7 @@ function draw(St, ts, view) {
   cx.textBaseline = 'top';
   if (view !== 'rack' && view !== 'board') {} 
   embers();
-  if (view === 'board') boardView(); else if (view === 'rack') rackView(); else if (view === 'mem') memView(); else if (view === 'fab') fabView(); else if (view === 'crypt') cryptView(); else if (view === 'altar') altarView(); else if (view === 'abyss') abyssView(); else chipView();
+  if (view === 'board') boardView(); else if (view === 'rack') rackView(); else if (view === 'mem') memView(); else if (view === 'fab') fabView(); else if (view === 'crypt') cryptView(); else if (view === 'altar') altarView(); else if (view === 'abyss') abyssView(); else if (view === 'ossuary') ossuaryView(); else if (view === 'void') voidView(); else if (view === 'star') starView(); else chipView();
   cx.restore();
 }
 root.SCENE = { init, draw, views, pulse };
